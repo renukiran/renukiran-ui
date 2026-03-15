@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Renukiran Learning Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #EBF0F9 0%, #FFFFFF 100%);
+    color: #52525B;
+    line-height: 1.5;
+  }
+
+  .login-wrapper {
+    width: 100%;
+    max-width: 420px;
+    padding: 24px;
+  }
+
+  /* Logo area */
+  .logo-area {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .logo-figures {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+
+  .logo-figures svg { display: block; }
+
+  .logo-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .logo-title .green { color: #7CB518; }
+  .logo-title .blue { color: #2B5EA7; }
+
+  .logo-subtitle {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    color: #2B5EA7;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .portal-title {
+    font-size: 15px;
+    color: #71717A;
+    font-weight: 500;
+    margin-top: 8px;
+  }
+
+  /* Card */
+  .login-card {
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06);
+    padding: 36px 32px 32px;
+  }
+
+  .card-heading {
+    font-size: 20px;
+    font-weight: 600;
+    color: #18181B;
+    margin-bottom: 4px;
+  }
+
+  .card-subheading {
+    font-size: 14px;
+    color: #71717A;
+    margin-bottom: 28px;
+  }
+
+  /* Form */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #18181B;
+    margin-bottom: 6px;
+  }
+
+  .input-wrapper {
+    position: relative;
+  }
+
+  .form-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #18181B;
+    background: #FAFAFA;
+    border: 1px solid #E4E4E7;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .form-input::placeholder { color: #71717A; }
+
+  .form-input:focus {
+    border-color: #2B5EA7;
+    box-shadow: 0 0 0 3px rgba(43,94,167,0.12);
+    background: #FFFFFF;
+  }
+
+  .form-input.is-invalid {
+    border-color: #DC2626;
+    box-shadow: 0 0 0 3px rgba(220,38,38,0.12);
+    background: #FFFFFF;
+  }
+
+  .form-input.is-valid {
+    border-color: #16A34A;
+    background: #FFFFFF;
+  }
+
+  .field-error {
+    display: none;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #DC2626;
+  }
+
+  .field-error.visible { display: block; }
+
+  .input-wrapper .form-input { padding-right: 44px; }
+
+  .toggle-password {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #71717A;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+
+  .toggle-password:hover { color: #18181B; }
+
+  .toggle-password svg { pointer-events: none; }
+
+  /* Remember / Forgot row */
+  .form-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #52525B;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #2B5EA7;
+    cursor: pointer;
+  }
+
+  .forgot-link {
+    font-size: 13px;
+    color: #2B5EA7;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+
+  .forgot-link:hover { color: #1E4A8A; text-decoration: underline; }
+
+  /* Button */
+  .btn-primary {
+    display: block;
+    width: 100%;
+    height: 44px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #FFFFFF;
+    background: #2B5EA7;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+
+  .btn-primary:hover { background: #1E4A8A; }
+
+  .btn-primary:active { box-shadow: 0 0 0 3px rgba(43,94,167,0.25); }
+
+  .btn-primary:disabled {
+    background: #A1A1AA;
+    cursor: not-allowed;
+  }
+
+  .inline-status {
+    display: none;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #E4E4E7;
+    background: #FAFAFA;
+    font-size: 13px;
+  }
+
+  .inline-status.visible { display: flex; }
+  .inline-status.error {
+    border-color: #FECACA;
+    background: #FEF2F2;
+    color: #991B1B;
+  }
+
+  .inline-status.success {
+    border-color: #BBF7D0;
+    background: #F0FDF4;
+    color: #166534;
+  }
+
+  .inline-status.info {
+    border-color: #BFDBFE;
+    background: #EFF6FF;
+    color: #1D4ED8;
+  }
+
+  .status-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: currentColor;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* Helper text */
+  .helper-text {
+    margin-top: 20px;
+    padding: 12px 14px;
+    background: #F4F4F5;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: #71717A;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 32px;
+    font-size: 12px;
+    color: #A1A1AA;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-wrapper">
+  <!-- Logo -->
+  <div class="logo-area">
+    <div class="logo-figures">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <!-- Abstract human figures -->
+        <circle cx="14" cy="10" r="4.5" fill="#7CB518"/>
+        <path d="M14 16c-5 0-9 3-9 7v3h18v-3c0-4-4-7-9-7z" fill="#7CB518" opacity="0.8"/>
+        <circle cx="34" cy="10" r="4.5" fill="#2B5EA7"/>
+        <path d="M34 16c-5 0-9 3-9 7v3h18v-3c0-4-4-7-9-7z" fill="#2B5EA7" opacity="0.8"/>
+        <circle cx="24" cy="6" r="5" fill="#2B5EA7"/>
+        <path d="M24 13c-6 0-10 3.5-10 8v4h20v-4c0-4.5-4-8-10-8z" fill="#2B5EA7" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="logo-title">
+      <span class="green">Renukiran</span>
+    </div>
+    <div class="logo-subtitle">Welfare Foundation</div>
+    <div class="portal-title">Learning Portal</div>
+  </div>
+
+  <!-- Login Card -->
+  <div class="login-card">
+    <h1 class="card-heading">Sign In</h1>
+    <p class="card-subheading">Enter your credentials to access the portal</p>
+
+    <div class="inline-status info visible" id="loginInfo">
+      <span class="status-icon">i</span>
+      <span id="loginInfoText">The screen is API-ready. If the configured auth API is unavailable, the mock admin user in auth-config.js can still be used.</span>
+    </div>
+
+    <div class="inline-status" id="loginStatus" aria-live="polite">
+      <span class="status-icon" id="loginStatusIcon">!</span>
+      <span id="loginStatusText"></span>
+    </div>
+
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="email">Email address</label>
+        <input class="form-input" type="email" id="email" placeholder="you@example.com" autocomplete="email">
+        <div class="field-error" id="emailError">Enter a valid email address.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-wrapper">
+          <input class="form-input" type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+          <button type="button" class="toggle-password" onclick="togglePw()" aria-label="Toggle password visibility">
+            <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg id="eye-off-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+              <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </button>
+        </div>
+        <div class="field-error" id="passwordError">Password must be at least 8 characters.</div>
+      </div>
+
+      <div class="form-options">
+        <label class="checkbox-label">
+          <input type="checkbox" id="rememberMe"> Remember me
+        </label>
+        <a href="#" class="forgot-link" id="forgotPasswordLink">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="btn-primary" id="signInButton" disabled>Sign In</button>
+    </form>
+
+    <div class="helper-text">
+      Staff accounts are created by the admin.<br>
+      Contact your administrator for access.
+    </div>
+  </div>
+
+  <div class="footer">Powered by RWF</div>
+</div>
+
+<script src="auth-config.js"></script>
+<script>
+var LOGIN_LOCK_KEY = 'rwf-login-lock';
+var LOGIN_ATTEMPT_KEY = 'rwf-login-attempt-count';
+
+function togglePw() {
+  var pw = document.getElementById('password');
+  var eyeOn = document.getElementById('eye-icon');
+  var eyeOff = document.getElementById('eye-off-icon');
+  if (pw.type === 'password') {
+    pw.type = 'text';
+    eyeOn.style.display = 'none';
+    eyeOff.style.display = 'block';
+  } else {
+    pw.type = 'password';
+    eyeOn.style.display = 'block';
+    eyeOff.style.display = 'none';
+  }
+}
+
+function getAuthConfig() {
+  if (window.RWF_AUTH_CONFIG) {
+    return window.RWF_AUTH_CONFIG;
+  }
+  return {
+    apiBaseUrl: '',
+    loginEndpoint: '/api/auth/login',
+    forgotPasswordUrl: '#',
+    tokenStorageKey: 'rwf-auth-token',
+    sessionStorageKey: 'rwf-auth-session',
+    rememberMeKey: 'rwf-remember-email',
+    requestHeaders: { 'Content-Type': 'application/json' },
+    requiredAdminPermissions: ['configure_courses', 'create_batches', 'manage_users', 'access_full_reports'],
+    roleRedirects: {
+      admin: '02-admin-dashboard.html',
+      office_coordinator: '08-oc-dashboard.html',
+      trainer: '21-trainer-dashboard.html'
+    },
+    enableMockFallback: false,
+    mockUsers: []
+  };
+}
+
+function showStatus(type, message) {
+  var statusEl = document.getElementById('loginStatus');
+  var iconEl = document.getElementById('loginStatusIcon');
+  var textEl = document.getElementById('loginStatusText');
+  statusEl.className = 'inline-status visible ' + type;
+  iconEl.textContent = type === 'success' ? '✓' : type === 'info' ? 'i' : '!';
+  textEl.textContent = message;
+}
+
+function hideStatus() {
+  var statusEl = document.getElementById('loginStatus');
+  statusEl.className = 'inline-status';
+  document.getElementById('loginStatusText').textContent = '';
+}
+
+function setFieldValidation(field, errorEl, isValid, errorMessage) {
+  field.classList.remove('is-valid', 'is-invalid');
+  if (!field.value.trim()) {
+    errorEl.classList.remove('visible');
+    return false;
+  }
+  if (isValid) {
+    field.classList.add('is-valid');
+    errorEl.classList.remove('visible');
+    return true;
+  }
+  field.classList.add('is-invalid');
+  errorEl.textContent = errorMessage;
+  errorEl.classList.add('visible');
+  return false;
+}
+
+function validateLoginFields() {
+  var emailField = document.getElementById('email');
+  var passwordField = document.getElementById('password');
+  var emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailField.value.trim());
+  var passwordValid = passwordField.value.length >= 8;
+  setFieldValidation(emailField, document.getElementById('emailError'), emailValid, 'Enter a valid email address.');
+  setFieldValidation(passwordField, document.getElementById('passwordError'), passwordValid, 'Password must be at least 8 characters.');
+  document.getElementById('signInButton').disabled = !(emailValid && passwordValid) || isLoginLocked();
+  return emailValid && passwordValid;
+}
+
+function isLoginLocked() {
+  var lockUntil = Number(window.localStorage.getItem(LOGIN_LOCK_KEY) || '0');
+  if (!lockUntil) {
+    return false;
+  }
+  if (Date.now() > lockUntil) {
+    window.localStorage.removeItem(LOGIN_LOCK_KEY);
+    window.localStorage.removeItem(LOGIN_ATTEMPT_KEY);
+    return false;
+  }
+  return true;
+}
+
+function getRemainingLockMinutes() {
+  var lockUntil = Number(window.localStorage.getItem(LOGIN_LOCK_KEY) || '0');
+  return Math.max(1, Math.ceil((lockUntil - Date.now()) / 60000));
+}
+
+function registerFailedAttempt() {
+  var nextAttemptCount = Number(window.localStorage.getItem(LOGIN_ATTEMPT_KEY) || '0') + 1;
+  window.localStorage.setItem(LOGIN_ATTEMPT_KEY, String(nextAttemptCount));
+  if (nextAttemptCount >= 5) {
+    var lockUntil = Date.now() + (15 * 60 * 1000);
+    window.localStorage.setItem(LOGIN_LOCK_KEY, String(lockUntil));
+  }
+}
+
+function clearFailedAttempts() {
+  window.localStorage.removeItem(LOGIN_ATTEMPT_KEY);
+  window.localStorage.removeItem(LOGIN_LOCK_KEY);
+}
+
+function setLoading(isLoading) {
+  var button = document.getElementById('signInButton');
+  button.disabled = isLoading || !validateLoginFields();
+  button.textContent = isLoading ? 'Signing In...' : 'Sign In';
+}
+
+function storeSession(authResult, rememberMe) {
+  var config = getAuthConfig();
+  var sessionPayload = JSON.stringify(authResult.user);
+  var storage = rememberMe ? window.localStorage : window.sessionStorage;
+  storage.setItem(config.tokenStorageKey, authResult.token || '');
+  storage.setItem(config.sessionStorageKey, sessionPayload);
+  if (rememberMe) {
+    window.localStorage.setItem(config.rememberMeKey, authResult.user.email || '');
+  } else {
+    window.localStorage.removeItem(config.rememberMeKey);
+  }
+}
+
+function resolveRedirect(role) {
+  var config = getAuthConfig();
+  return config.roleRedirects[role] || '01-login.html';
+}
+
+function ensureAdminAccess(user) {
+  var config = getAuthConfig();
+  if (user.role !== 'admin') {
+    return { ok: false, message: 'This account is not an Admin account. Use the appropriate portal for your role.' };
+  }
+  var permissions = Array.isArray(user.permissions) ? user.permissions : [];
+  var hasAllPermissions = config.requiredAdminPermissions.every(function (permission) {
+    return permissions.indexOf(permission) !== -1;
+  });
+  if (!hasAllPermissions) {
+    return { ok: false, message: 'Admin login succeeded, but the account is missing required admin permissions.' };
+  }
+  return { ok: true };
+}
+
+function tryMockLogin(email, password) {
+  var config = getAuthConfig();
+  if (!config.enableMockFallback) {
+    return null;
+  }
+  var matchedUser = (config.mockUsers || []).find(function (candidate) {
+    return candidate.email.toLowerCase() === email.toLowerCase() && candidate.password === password;
+  });
+  if (!matchedUser) {
+    return null;
+  }
+  return Promise.resolve({ token: matchedUser.token, user: matchedUser.user, source: 'mock' });
+}
+
+function loginViaApi(email, password) {
+  var config = getAuthConfig();
+  var url = String(config.apiBaseUrl || '') + String(config.loginEndpoint || '');
+  return fetch(url, {
+    method: 'POST',
+    headers: config.requestHeaders,
+    body: JSON.stringify({ email: email, password: password })
+  }).then(function (response) {
+    return response.json().catch(function () {
+      return {};
+    }).then(function (payload) {
+      if (!response.ok) {
+        var message = payload.message || 'Invalid email or password.';
+        throw new Error(message);
+      }
+      return payload;
+    });
+  });
+}
+
+function authenticate(email, password) {
+  return loginViaApi(email, password).catch(function (error) {
+    return tryMockLogin(email, password).then(function (mockResult) {
+      if (mockResult) {
+        return mockResult;
+      }
+      throw error;
+    });
+  });
+}
+
+function hydrateFromRememberMe() {
+  var config = getAuthConfig();
+  var rememberedEmail = window.localStorage.getItem(config.rememberMeKey);
+  if (rememberedEmail) {
+    document.getElementById('email').value = rememberedEmail;
+    document.getElementById('rememberMe').checked = true;
+  }
+  document.getElementById('forgotPasswordLink').href = config.forgotPasswordUrl || '#';
+}
+
+function handleInitialState() {
+  hydrateFromRememberMe();
+  if (isLoginLocked()) {
+    showStatus('error', 'Too many attempts. Try again in ' + getRemainingLockMinutes() + ' minutes.');
+  }
+  validateLoginFields();
+}
+
+document.getElementById('email').addEventListener('input', function () {
+  hideStatus();
+  validateLoginFields();
+});
+document.getElementById('password').addEventListener('input', function () {
+  hideStatus();
+  validateLoginFields();
+});
+
+document.getElementById('loginForm').addEventListener('submit', function (event) {
+  event.preventDefault();
+
+  if (isLoginLocked()) {
+    showStatus('error', 'Too many attempts. Try again in ' + getRemainingLockMinutes() + ' minutes.');
+    return;
+  }
+
+  if (!validateLoginFields()) {
+    showStatus('error', 'Review the highlighted fields before signing in.');
+    return;
+  }
+
+  var email = document.getElementById('email').value.trim();
+  var password = document.getElementById('password').value;
+  var rememberMe = document.getElementById('rememberMe').checked;
+
+  setLoading(true);
+  showStatus('info', 'Validating credentials...');
+
+  authenticate(email, password)
+    .then(function (authResult) {
+      var user = authResult.user || {};
+      var adminCheck = ensureAdminAccess(user);
+      if (!adminCheck.ok) {
+        throw new Error(adminCheck.message);
+      }
+
+      clearFailedAttempts();
+      storeSession(authResult, rememberMe);
+      showStatus('success', 'Admin login successful. Redirecting to dashboard...');
+      setTimeout(function () {
+        window.location.href = resolveRedirect(user.role);
+      }, 700);
+    })
+    .catch(function (error) {
+      registerFailedAttempt();
+      if (isLoginLocked()) {
+        showStatus('error', 'Too many attempts. Try again in ' + getRemainingLockMinutes() + ' minutes.');
+      } else {
+        showStatus('error', error.message || 'Invalid email or password.');
+      }
+    })
+    .finally(function () {
+      setLoading(false);
+    });
+});
+
+handleInitialState();
+</script>
+</body>
+</html>
