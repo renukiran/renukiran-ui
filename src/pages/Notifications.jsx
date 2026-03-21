@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { notificationAPI } from '../services/api';
 
 const Notifications = () => {
+  // eslint-disable-next-line no-unused-vars
+  // eslint-disable-next-line no-unused-vars
   const [notifications, setNotifications] = useState([
     { message: 'New application submitted', time: '2 hrs ago' },
     { message: 'Batch 1 starts in 5 days', time: '1 day ago' },

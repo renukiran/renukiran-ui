@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { dashboardAPI } from '../services/api';
 
 const Dashboard = () => {
+  // eslint-disable-next-line no-unused-vars
   const [stats, setStats] = useState([
     { label: 'Total Applications', value: '24' },
     { label: 'Active Batches', value: '2' },

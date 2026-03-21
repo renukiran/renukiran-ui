@@ -62,4 +62,30 @@ export const notificationAPI = {
 // Dashboard endpoints
 export const dashboardAPI = {
   getStats: () => apiCall('/dashboard/stats', 'GET'),
+  getAdminStats: () => apiCall('/dashboard/admin-stats', 'GET'),
+};
+
+// Auth endpoints
+export const authAPI = {
+  login: (credentials) => apiCall('/auth/login', 'POST', credentials),
+  logout: () => apiCall('/auth/logout', 'POST'),
+  forgotPassword: (email) => apiCall('/auth/forgot-password', 'POST', { email }),
+};
+
+// Course endpoints
+export const courseAPI = {
+  getCourses: () => apiCall('/courses', 'GET'),
+  getCourseById: (id) => apiCall(`/courses/${id}`, 'GET'),
+  createCourse: (data) => apiCall('/courses', 'POST', data),
+  updateCourse: (id, data) => apiCall(`/courses/${id}`, 'PUT', data),
+  deleteCourse: (id) => apiCall(`/courses/${id}`, 'DELETE'),
+};
+
+// User/staff endpoints
+export const userAPI = {
+  getUsers: () => apiCall('/users', 'GET'),
+  getUserById: (id) => apiCall(`/users/${id}`, 'GET'),
+  createUser: (data) => apiCall('/users', 'POST', data),
+  updateUser: (id, data) => apiCall(`/users/${id}`, 'PUT', data),
+  toggleUserStatus: (id) => apiCall(`/users/${id}/toggle-status`, 'PATCH'),
 };

@@ -6,7 +6,6 @@ import Step2Household from '../components/Step2Household';
 import Step3EducationWork from '../components/Step3EducationWork';
 import Step4TrainingInterest from '../components/Step4TrainingInterest';
 import Step5NeedAssessment from '../components/Step5NeedAssessment';
-import { applicationAPI } from '../services/api';
 
 const Applications = ({ onNavigate }) => {
   const [currentStep, setCurrentStep] = useState(1);

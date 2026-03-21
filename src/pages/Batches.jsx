@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { batchAPI } from '../services/api';
 
 const Batches = () => {
+  // eslint-disable-next-line no-unused-vars
   const [batches, setBatches] = useState([
     { name: 'Batch 1', date: '01 Apr 2026' },
     { name: 'Batch 2', date: '15 Apr 2026' },
