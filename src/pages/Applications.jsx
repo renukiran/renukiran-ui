@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { ArrowLeft } from 'lucide-react';
 import StepIndicator from '../components/StepIndicator';
 import Step1PersonalInfo from '../components/Step1PersonalInfo';
@@ -10,16 +11,71 @@ import { applicationAPI } from '../services/api';
 
 const Applications = ({ onNavigate }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+    trigger,
+    getValues,
+    reset,
+  } = useForm({
+    mode: 'onBlur',
+    defaultValues: {
+      batch: '',
+      fullName: '',
+      age: '',
+      fatherName: '',
+      mobile: '',
+      alternateNumber: '',
+      address: '',
+      localResident: '',
+      aadhaar: '',
+      bankAccount: '',
+      caste: '',
+      totalFamilyMembers: '',
+      workingMembers: '',
+      monthlyHouseholdIncome: '',
+      primarySourceOfIncome: '',
+      housingType: '',
+      governmentSchemes: [],
+      migrationRisk: '',
+      educationLevel: '',
+      stitchingExperience: '',
+      sewingMachineAtHome: '',
+      beautyParlourExperience: '',
+      foodBusinessExperience: '',
+      handicraftExperience: '',
+      previousSkillTraining: '',
+      preferredEnterpriseTrack: [],
+      distanceToTrainingCentre: '',
+      motivationForJoining: [],
+      economicSituation: [],
+      learningSkillNeeds: [],
+      enterpriseAspirations: [],
+      willingToParticipate: '',
+    },
+  });
+
+  const formData = watch();
+
+  const stepValidationRules = {
+    1: ['batch', 'fullName', 'age', 'fatherName', 'mobile', 'address', 'localResident', 'bankAccount', 'caste'],
+    2: ['totalFamilyMembers', 'workingMembers', 'monthlyHouseholdIncome', 'primarySourceOfIncome', 'housingType', 'migrationRisk'],
+    3: ['educationLevel', 'stitchingExperience', 'sewingMachineAtHome', 'beautyParlourExperience', 'foodBusinessExperience', 'handicraftExperience'],
+    4: ['preferredEnterpriseTrack', 'distanceToTrainingCentre', 'motivationForJoining'],
+    5: ['economicSituation', 'learningSkillNeeds', 'enterpriseAspirations', 'willingToParticipate'],
   };
 
-  const handleNext = () => {
-    if (currentStep < 5) setCurrentStep(currentStep + 1);
+  const handleNext = async () => {
+    const fieldsToValidate = stepValidationRules[currentStep];
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid && currentStep < 5) {
+      setCurrentStep(currentStep + 1);
+    }
   };
 
   const handleBack = () => {
@@ -30,9 +86,7 @@ const Applications = ({ onNavigate }) => {
     try {
       setLoading(true);
       setError(null);
-      // Placeholder for save draft API call
-      console.log('Saving draft with data:', formData);
-      // const response = await applicationAPI.updateApplication(id, formData);
+      console.log('Saving draft with data:', getValues());
       alert('Draft saved successfully!');
     } catch (err) {
       setError('Failed to save draft');
@@ -42,22 +96,28 @@ const Applications = ({ onNavigate }) => {
     }
   };
 
-  const handleSubmit = async () => {
+  const onSubmit = async (data) => {
     try {
       setLoading(true);
       setError(null);
-      // Placeholder for submit application API call
-      console.log('Submitting application with data:', formData);
-      // const response = await applicationAPI.submitApplication(formData);
+      console.log('Submitting application with data:', data);
       alert('Application submitted successfully!');
+      reset();
       setCurrentStep(1);
-      setFormData({});
       onNavigate('Dashboard');
     } catch (err) {
       setError('Failed to submit application');
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitClick = async () => {
+    const fieldsToValidate = stepValidationRules[5];
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid) {
+      handleSubmit(onSubmit)();
     }
   };
 
@@ -82,8 +142,8 @@ const Applications = ({ onNavigate }) => {
 
       {currentStep === 1 && (
         <Step1PersonalInfo
-          formData={formData}
-          onChange={handleChange}
+          register={register}
+          errors={errors}
           onNext={handleNext}
           onBack={handleBack}
           onSaveDraft={handleSaveDraft}
@@ -92,8 +152,8 @@ const Applications = ({ onNavigate }) => {
       )}
       {currentStep === 2 && (
         <Step2Household
-          formData={formData}
-          onChange={handleChange}
+          register={register}
+          errors={errors}
           onNext={handleNext}
           onBack={handleBack}
           onSaveDraft={handleSaveDraft}
@@ -102,8 +162,8 @@ const Applications = ({ onNavigate }) => {
       )}
       {currentStep === 3 && (
         <Step3EducationWork
-          formData={formData}
-          onChange={handleChange}
+          register={register}
+          errors={errors}
           onNext={handleNext}
           onBack={handleBack}
           onSaveDraft={handleSaveDraft}
@@ -112,8 +172,8 @@ const Applications = ({ onNavigate }) => {
       )}
       {currentStep === 4 && (
         <Step4TrainingInterest
-          formData={formData}
-          onChange={handleChange}
+          register={register}
+          errors={errors}
           onNext={handleNext}
           onBack={handleBack}
           onSaveDraft={handleSaveDraft}
@@ -122,10 +182,10 @@ const Applications = ({ onNavigate }) => {
       )}
       {currentStep === 5 && (
         <Step5NeedAssessment
-          formData={formData}
-          onChange={handleChange}
+          register={register}
+          errors={errors}
           onBack={handleBack}
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmitClick}
           onSaveDraft={handleSaveDraft}
           loading={loading}
         />

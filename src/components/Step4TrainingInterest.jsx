@@ -1,35 +1,20 @@
 import React from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
-const Step4TrainingInterest = ({ formData, onChange, onNext, onBack, onSaveDraft, loading }) => {
+const Err = ({ msg }) => msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
+
+const Step4TrainingInterest = ({ register, errors, onNext, onBack, onSaveDraft, loading }) => {
   const enterpriseTrackOptions = [
-    'Stitching / Garment Production',
-    'Bag Making',
-    'Beauty / Parlour Services',
-    'Home-based Food Enterprise',
-    'Handicraft & Decoration Work',
-    'Other',
+    'Stitching / Garment Production', 'Bag Making', 'Beauty / Parlour Services',
+    'Home-based Food Enterprise', 'Handicraft & Decoration Work', 'Other',
   ];
 
   const distanceOptions = ['< 1 km', '1 – 2 km', '> 2 km'];
 
   const motivationOptions = [
-    'Want income immediately',
-    'Want to support family',
-    'Want to learn market-demand skills',
-    'Want home-based work',
-    'Want to start micro-enterprise',
-    'Want to join SHG after program',
-    'Other',
+    'Want income immediately', 'Want to support family', 'Want to learn market-demand skills',
+    'Want home-based work', 'Want to start micro-enterprise', 'Want to join SHG after program', 'Other',
   ];
-
-  const handleCheckbox = (field, value) => {
-    const current = formData[field] || [];
-    const updated = current.includes(value)
-      ? current.filter((v) => v !== value)
-      : [...current, value];
-    onChange(field, updated);
-  };
 
   return (
     <div className="space-y-6">
@@ -51,14 +36,17 @@ const Step4TrainingInterest = ({ formData, onChange, onNext, onBack, onSaveDraft
             <label key={option} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={(formData.preferredEnterpriseTrack || []).includes(option)}
-                onChange={() => handleCheckbox('preferredEnterpriseTrack', option)}
+                value={option}
+                {...register('preferredEnterpriseTrack', {
+                  validate: (value) => (value && value.length > 0) || 'Please select at least one option',
+                })}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{option}</span>
             </label>
           ))}
         </div>
+        <Err msg={errors.preferredEnterpriseTrack?.message} />
       </div>
 
       <hr className="border-gray-200 my-6" />
@@ -73,16 +61,15 @@ const Step4TrainingInterest = ({ formData, onChange, onNext, onBack, onSaveDraft
             <label key={option} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="distanceToTrainingCentre"
                 value={option}
-                checked={formData.distanceToTrainingCentre === option}
-                onChange={(e) => onChange('distanceToTrainingCentre', e.target.value)}
+                {...register('distanceToTrainingCentre', { required: 'Please select distance' })}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{option}</span>
             </label>
           ))}
         </div>
+        <Err msg={errors.distanceToTrainingCentre?.message} />
       </div>
 
       <hr className="border-gray-200 my-6" />
@@ -98,14 +85,17 @@ const Step4TrainingInterest = ({ formData, onChange, onNext, onBack, onSaveDraft
             <label key={option} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={(formData.motivationForJoining || []).includes(option)}
-                onChange={() => handleCheckbox('motivationForJoining', option)}
+                value={option}
+                {...register('motivationForJoining', {
+                  validate: (value) => (value && value.length > 0) || 'Please select at least one option',
+                })}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{option}</span>
             </label>
           ))}
         </div>
+        <Err msg={errors.motivationForJoining?.message} />
       </div>
 
       {/* Footer */}

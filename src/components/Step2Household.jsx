@@ -1,30 +1,21 @@
 import React from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { Controller, useFormContext } from 'react-hook-form';
 
-const Step2Household = ({ formData, onChange, onNext, onBack, onSaveDraft, loading }) => {
+const Err = ({ msg }) => msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
+const inputCls = (hasErr) =>
+  `w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${hasErr ? 'border-red-500' : 'border-gray-300'}`;
+
+const Step2Household = ({ register, errors, onNext, onBack, onSaveDraft, loading }) => {
+  const { control } = useFormContext() || {};
+  
   const governmentSchemeOptions = [
-    'Ration Card',
-    'Widow Pension',
-    'Old Age Pension',
-    'Jan Dhan Account',
-    'Ujjwala',
-    'Other',
+    'Ration Card', 'Widow Pension', 'Old Age Pension', 'Jan Dhan Account', 'Ujjwala', 'Other',
   ];
 
   const migrationRiskOptions = [
-    'Will stay long-term',
-    'Maybe will move',
-    'Likely to move',
-    'Does not know',
+    'Will stay long-term', 'Maybe will move', 'Likely to move', 'Does not know',
   ];
-
-  const handleCheckbox = (field, value) => {
-    const current = formData[field] || [];
-    const updated = current.includes(value)
-      ? current.filter((v) => v !== value)
-      : [...current, value];
-    onChange(field, updated);
-  };
 
   return (
     <div className="space-y-6">
@@ -44,10 +35,10 @@ const Step2Household = ({ formData, onChange, onNext, onBack, onSaveDraft, loadi
           <input
             type="number"
             placeholder="e.g. 5"
-            value={formData.totalFamilyMembers || ''}
-            onChange={(e) => onChange('totalFamilyMembers', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {...register('totalFamilyMembers', { required: 'Total family members is required' })}
+            className={inputCls(errors.totalFamilyMembers)}
           />
+          <Err msg={errors.totalFamilyMembers?.message} />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -56,10 +47,10 @@ const Step2Household = ({ formData, onChange, onNext, onBack, onSaveDraft, loadi
           <input
             type="number"
             placeholder="e.g. 2"
-            value={formData.workingMembers || ''}
-            onChange={(e) => onChange('workingMembers', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {...register('workingMembers', { required: 'Working members is required' })}
+            className={inputCls(errors.workingMembers)}
           />
+          <Err msg={errors.workingMembers?.message} />
         </div>
       </div>
 
@@ -72,10 +63,10 @@ const Step2Household = ({ formData, onChange, onNext, onBack, onSaveDraft, loadi
           <input
             type="number"
             placeholder="e.g. 8000"
-            value={formData.monthlyHouseholdIncome || ''}
-            onChange={(e) => onChange('monthlyHouseholdIncome', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {...register('monthlyHouseholdIncome', { required: 'Monthly income is required' })}
+            className={inputCls(errors.monthlyHouseholdIncome)}
           />
+          <Err msg={errors.monthlyHouseholdIncome?.message} />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -84,10 +75,10 @@ const Step2Household = ({ formData, onChange, onNext, onBack, onSaveDraft, loadi
           <input
             type="text"
             placeholder="e.g. Daily wage labour"
-            value={formData.primarySourceOfIncome || ''}
-            onChange={(e) => onChange('primarySourceOfIncome', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {...register('primarySourceOfIncome', { required: 'Primary source of income is required' })}
+            className={inputCls(errors.primarySourceOfIncome)}
           />
+          <Err msg={errors.primarySourceOfIncome?.message} />
         </div>
       </div>
 
@@ -101,16 +92,15 @@ const Step2Household = ({ formData, onChange, onNext, onBack, onSaveDraft, loadi
             <label key={type} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="housingType"
                 value={type}
-                checked={formData.housingType === type}
-                onChange={(e) => onChange('housingType', e.target.value)}
+                {...register('housingType', { required: 'Please select housing type' })}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{type}</span>
             </label>
           ))}
         </div>
+        <Err msg={errors.housingType?.message} />
       </div>
 
       {/* Government Schemes Availed */}
@@ -123,8 +113,8 @@ const Step2Household = ({ formData, onChange, onNext, onBack, onSaveDraft, loadi
             <label key={scheme} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={(formData.governmentSchemes || []).includes(scheme)}
-                onChange={() => handleCheckbox('governmentSchemes', scheme)}
+                value={scheme}
+                {...register('governmentSchemes')}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{scheme}</span>
@@ -143,16 +133,15 @@ const Step2Household = ({ formData, onChange, onNext, onBack, onSaveDraft, loadi
             <label key={option} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="migrationRisk"
                 value={option}
-                checked={formData.migrationRisk === option}
-                onChange={(e) => onChange('migrationRisk', e.target.value)}
+                {...register('migrationRisk', { required: 'Please select migration risk' })}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{option}</span>
             </label>
           ))}
         </div>
+        <Err msg={errors.migrationRisk?.message} />
       </div>
 
       {/* Footer */}

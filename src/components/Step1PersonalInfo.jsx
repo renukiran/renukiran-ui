@@ -1,7 +1,11 @@
 import React from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
-const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, loading }) => {
+const Err = ({ msg }) => msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
+const inputCls = (hasErr) =>
+  `w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${hasErr ? 'border-red-500' : 'border-gray-300'}`;
+
+const Step1PersonalInfo = ({ register, errors, onNext, onBack, onSaveDraft, loading }) => {
   return (
     <div className="space-y-6">
       <div>
@@ -21,16 +25,15 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
             <label key={batch} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="batch"
                 value={batch}
-                checked={formData.batch === batch}
-                onChange={(e) => onChange('batch', e.target.value)}
+                {...register('batch', { required: 'Please select a batch' })}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{batch}</span>
             </label>
           ))}
         </div>
+        <Err msg={errors.batch?.message} />
       </div>
 
       {/* Full Name & Age */}
@@ -42,10 +45,10 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
           <input
             type="text"
             placeholder="Enter full name"
-            value={formData.fullName || ''}
-            onChange={(e) => onChange('fullName', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {...register('fullName', { required: 'Full name is required' })}
+            className={inputCls(errors.fullName)}
           />
+          <Err msg={errors.fullName?.message} />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -54,10 +57,10 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
           <input
             type="number"
             placeholder="e.g. 28"
-            value={formData.age || ''}
-            onChange={(e) => onChange('age', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {...register('age', { required: 'Age is required' })}
+            className={inputCls(errors.age)}
           />
+          <Err msg={errors.age?.message} />
         </div>
       </div>
 
@@ -69,10 +72,10 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
         <input
           type="text"
           placeholder="Enter father or husband name"
-          value={formData.fatherName || ''}
-          onChange={(e) => onChange('fatherName', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          {...register('fatherName', { required: 'Father / Husband name is required' })}
+          className={inputCls(errors.fatherName)}
         />
+        <Err msg={errors.fatherName?.message} />
       </div>
 
       {/* Mobile & Alternate */}
@@ -84,18 +87,17 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
           <input
             type="text"
             placeholder="e.g. 9876543210"
-            value={formData.mobile || ''}
-            onChange={(e) => onChange('mobile', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {...register('mobile', { required: 'Mobile number is required' })}
+            className={inputCls(errors.mobile)}
           />
+          <Err msg={errors.mobile?.message} />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Alternate Number</label>
           <input
             type="text"
             placeholder="Optional"
-            value={formData.alternateNumber || ''}
-            onChange={(e) => onChange('alternateNumber', e.target.value)}
+            {...register('alternateNumber')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -108,11 +110,11 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
         </label>
         <textarea
           placeholder="House no., street, locality, city, pin code"
-          value={formData.address || ''}
-          onChange={(e) => onChange('address', e.target.value)}
+          {...register('address', { required: 'Address is required' })}
           rows="3"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={inputCls(errors.address)}
         />
+        <Err msg={errors.address?.message} />
       </div>
 
       {/* Local Resident */}
@@ -125,16 +127,15 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
             <label key={option} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="localResident"
                 value={option}
-                checked={formData.localResident === option}
-                onChange={(e) => onChange('localResident', e.target.value)}
+                {...register('localResident', { required: 'Please select an option' })}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{option}</span>
             </label>
           ))}
         </div>
+        <Err msg={errors.localResident?.message} />
       </div>
 
       {/* Aadhaar & Bank Account */}
@@ -144,8 +145,7 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
           <input
             type="text"
             placeholder="12-digit Aadhaar number"
-            value={formData.aadhaar || ''}
-            onChange={(e) => onChange('aadhaar', e.target.value)}
+            {...register('aadhaar')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -158,16 +158,15 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
               <label key={option} className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
-                  name="bankAccount"
                   value={option}
-                  checked={formData.bankAccount === option}
-                  onChange={(e) => onChange('bankAccount', e.target.value)}
+                  {...register('bankAccount', { required: 'Please select an option' })}
                   className="w-4 h-4"
                 />
                 <span className="text-gray-700">{option}</span>
               </label>
             ))}
           </div>
+          <Err msg={errors.bankAccount?.message} />
         </div>
       </div>
 
@@ -181,16 +180,15 @@ const Step1PersonalInfo = ({ formData, onChange, onNext, onBack, onSaveDraft, lo
             <label key={caste} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="caste"
                 value={caste}
-                checked={formData.caste === caste}
-                onChange={(e) => onChange('caste', e.target.value)}
+                {...register('caste', { required: 'Please select a caste category' })}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{caste}</span>
             </label>
           ))}
         </div>
+        <Err msg={errors.caste?.message} />
       </div>
 
       {/* Footer */}

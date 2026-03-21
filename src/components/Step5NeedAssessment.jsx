@@ -1,44 +1,45 @@
 import React from 'react';
 import { ChevronLeft, Check } from 'lucide-react';
 
-const Step5NeedAssessment = ({ formData, onChange, onBack, onSubmit, onSaveDraft, loading }) => {
+const Err = ({ msg }) => msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
+
+const Step5NeedAssessment = ({ register, errors, onBack, onSubmit, onSaveDraft, loading }) => {
   const economicSituationOptions = [
-    'Extremely low income',
-    'Single mother / widow',
-    'No stable income',
-    'High financial stress',
-    'Family dependent on her',
-    'Other',
+    'Extremely low income', 'Single mother / widow', 'No stable income',
+    'High financial stress', 'Family dependent on her', 'Other',
   ];
 
   const learningSkillNeedsOptions = [
-    'Foundation-level training',
-    'Machine support needed',
-    'Confidence building',
-    'Speed improvement',
-    'Finishing / Quality control',
-    'Business basics',
-    'Other',
+    'Foundation-level training', 'Machine support needed', 'Confidence building',
+    'Speed improvement', 'Finishing / Quality control', 'Business basics', 'Other',
   ];
 
   const enterpriseAspirationsOptions = [
-    'Start home kitchen',
-    'Work in mobile parlour',
-    'Join garment job-work',
-    'Start boutique / home stitching',
-    'Join handicraft work',
-    'Start micro-enterprise',
-    'Join SHG after 6 months',
-    'Other',
+    'Start home kitchen', 'Work in mobile parlour', 'Join garment job-work',
+    'Start boutique / home stitching', 'Join handicraft work', 'Start micro-enterprise',
+    'Join SHG after 6 months', 'Other',
   ];
 
-  const handleCheckbox = (field, value) => {
-    const current = formData[field] || [];
-    const updated = current.includes(value)
-      ? current.filter((v) => v !== value)
-      : [...current, value];
-    onChange(field, updated);
-  };
+  const CheckboxGroup = ({ field, options, required = false }) => (
+    <>
+      <div className="space-y-2">
+        {options.map((option) => (
+          <label key={option} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              value={option}
+              {...register(field, required ? {
+                validate: (value) => (value && value.length > 0) || 'Please select at least one option',
+              } : {})}
+              className="w-4 h-4"
+            />
+            <span className="text-gray-700">{option}</span>
+          </label>
+        ))}
+      </div>
+      <Err msg={errors[field]?.message} />
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -55,19 +56,7 @@ const Step5NeedAssessment = ({ formData, onChange, onBack, onSubmit, onSaveDraft
           Economic Situation <span className="text-red-500">*</span>
         </label>
         <p className="text-xs text-gray-500 mb-3">Select all that apply</p>
-        <div className="space-y-2">
-          {economicSituationOptions.map((option) => (
-            <label key={option} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={(formData.economicSituation || []).includes(option)}
-                onChange={() => handleCheckbox('economicSituation', option)}
-                className="w-4 h-4"
-              />
-              <span className="text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
+        <CheckboxGroup field="economicSituation" options={economicSituationOptions} required />
       </div>
 
       <hr className="border-gray-200 my-6" />
@@ -78,19 +67,7 @@ const Step5NeedAssessment = ({ formData, onChange, onBack, onSubmit, onSaveDraft
           Learning & Skill Needs <span className="text-red-500">*</span>
         </label>
         <p className="text-xs text-gray-500 mb-3">Select all that apply</p>
-        <div className="space-y-2">
-          {learningSkillNeedsOptions.map((option) => (
-            <label key={option} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={(formData.learningSkillNeeds || []).includes(option)}
-                onChange={() => handleCheckbox('learningSkillNeeds', option)}
-                className="w-4 h-4"
-              />
-              <span className="text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
+        <CheckboxGroup field="learningSkillNeeds" options={learningSkillNeedsOptions} required />
       </div>
 
       <hr className="border-gray-200 my-6" />
@@ -101,19 +78,7 @@ const Step5NeedAssessment = ({ formData, onChange, onBack, onSubmit, onSaveDraft
           Enterprise Aspirations <span className="text-red-500">*</span>
         </label>
         <p className="text-xs text-gray-500 mb-3">Select all that apply</p>
-        <div className="space-y-2">
-          {enterpriseAspirationsOptions.map((option) => (
-            <label key={option} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={(formData.enterpriseAspirations || []).includes(option)}
-                onChange={() => handleCheckbox('enterpriseAspirations', option)}
-                className="w-4 h-4"
-              />
-              <span className="text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
+        <CheckboxGroup field="enterpriseAspirations" options={enterpriseAspirationsOptions} required />
       </div>
 
       <hr className="border-gray-200 my-6" />
@@ -128,16 +93,15 @@ const Step5NeedAssessment = ({ formData, onChange, onBack, onSubmit, onSaveDraft
             <label key={option} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="willingToParticipate"
                 value={option}
-                checked={formData.willingToParticipate === option}
-                onChange={(e) => onChange('willingToParticipate', e.target.value)}
+                {...register('willingToParticipate', { required: 'Please select an option' })}
                 className="w-4 h-4"
               />
               <span className="text-gray-700">{option}</span>
             </label>
           ))}
         </div>
+        <Err msg={errors.willingToParticipate?.message} />
       </div>
 
       {/* Footer */}

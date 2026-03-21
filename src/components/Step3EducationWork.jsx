@@ -1,17 +1,33 @@
 import React from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
-const Step3EducationWork = ({ formData, onChange, onNext, onBack, onSaveDraft, loading }) => {
+const Err = ({ msg }) => msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
+
+const Step3EducationWork = ({ register, errors, onNext, onBack, onSaveDraft, loading }) => {
   const educationLevels = [
-    'No formal education',
-    'Primary',
-    'Secondary',
-    'Higher Secondary',
-    'Graduate',
-    'Other',
+    'No formal education', 'Primary', 'Secondary', 'Higher Secondary', 'Graduate', 'Other',
   ];
 
   const stitchingExperienceOptions = ['None', 'Basic', 'Good', 'Advanced'];
+
+  const RadioGroup = ({ name, field, options, inline = true, required = false }) => (
+    <>
+      <div className={inline ? 'flex gap-6' : 'space-y-2'}>
+        {options.map((option) => (
+          <label key={option} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              value={option}
+              {...register(field, required ? { required: `Please select ${name}` } : {})}
+              className="w-4 h-4"
+            />
+            <span className="text-gray-700">{option}</span>
+          </label>
+        ))}
+      </div>
+      <Err msg={errors[field]?.message} />
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -27,21 +43,7 @@ const Step3EducationWork = ({ formData, onChange, onNext, onBack, onSaveDraft, l
         <label className="block text-sm font-semibold text-gray-700 mb-3">
           Education Level <span className="text-red-500">*</span>
         </label>
-        <div className="space-y-2">
-          {educationLevels.map((level) => (
-            <label key={level} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="educationLevel"
-                value={level}
-                checked={formData.educationLevel === level}
-                onChange={(e) => onChange('educationLevel', e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="text-gray-700">{level}</span>
-            </label>
-          ))}
-        </div>
+        <RadioGroup name="education level" field="educationLevel" options={educationLevels} inline={false} required />
       </div>
 
       <hr className="border-gray-200 my-6" />
@@ -51,21 +53,7 @@ const Step3EducationWork = ({ formData, onChange, onNext, onBack, onSaveDraft, l
         <label className="block text-sm font-semibold text-gray-700 mb-3">
           Stitching Experience <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-6">
-          {stitchingExperienceOptions.map((option) => (
-            <label key={option} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="stitchingExperience"
-                value={option}
-                checked={formData.stitchingExperience === option}
-                onChange={(e) => onChange('stitchingExperience', e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
+        <RadioGroup name="stitching experience" field="stitchingExperience" options={stitchingExperienceOptions} required />
       </div>
 
       {/* Sewing Machine at Home */}
@@ -73,21 +61,7 @@ const Step3EducationWork = ({ formData, onChange, onNext, onBack, onSaveDraft, l
         <label className="block text-sm font-semibold text-gray-700 mb-3">
           Sewing Machine at Home <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-6">
-          {['Yes', 'No'].map((option) => (
-            <label key={option} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="sewingMachineAtHome"
-                value={option}
-                checked={formData.sewingMachineAtHome === option}
-                onChange={(e) => onChange('sewingMachineAtHome', e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
+        <RadioGroup name="sewing machine option" field="sewingMachineAtHome" options={['Yes', 'No']} required />
       </div>
 
       {/* Beauty / Parlour Experience */}
@@ -95,21 +69,7 @@ const Step3EducationWork = ({ formData, onChange, onNext, onBack, onSaveDraft, l
         <label className="block text-sm font-semibold text-gray-700 mb-3">
           Beauty / Parlour Experience <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-6">
-          {['Yes', 'No'].map((option) => (
-            <label key={option} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="beautyParlourExperience"
-                value={option}
-                checked={formData.beautyParlourExperience === option}
-                onChange={(e) => onChange('beautyParlourExperience', e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
+        <RadioGroup name="beauty parlour experience" field="beautyParlourExperience" options={['Yes', 'No']} required />
       </div>
 
       {/* Food Business Experience */}
@@ -117,21 +77,7 @@ const Step3EducationWork = ({ formData, onChange, onNext, onBack, onSaveDraft, l
         <label className="block text-sm font-semibold text-gray-700 mb-3">
           Food Business Experience <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-6">
-          {['Yes', 'No'].map((option) => (
-            <label key={option} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="foodBusinessExperience"
-                value={option}
-                checked={formData.foodBusinessExperience === option}
-                onChange={(e) => onChange('foodBusinessExperience', e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
+        <RadioGroup name="food business experience" field="foodBusinessExperience" options={['Yes', 'No']} required />
       </div>
 
       {/* Handicraft Experience */}
@@ -139,21 +85,7 @@ const Step3EducationWork = ({ formData, onChange, onNext, onBack, onSaveDraft, l
         <label className="block text-sm font-semibold text-gray-700 mb-3">
           Handicraft Experience <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-6">
-          {['Yes', 'No'].map((option) => (
-            <label key={option} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="handicraftExperience"
-                value={option}
-                checked={formData.handicraftExperience === option}
-                onChange={(e) => onChange('handicraftExperience', e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
+        <RadioGroup name="handicraft experience" field="handicraftExperience" options={['Yes', 'No']} required />
       </div>
 
       <hr className="border-gray-200 my-6" />
@@ -165,8 +97,7 @@ const Step3EducationWork = ({ formData, onChange, onNext, onBack, onSaveDraft, l
         </label>
         <textarea
           placeholder="Describe any previous skill training received (optional)"
-          value={formData.previousSkillTraining || ''}
-          onChange={(e) => onChange('previousSkillTraining', e.target.value)}
+          {...register('previousSkillTraining')}
           rows="4"
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
