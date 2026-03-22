@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
 import Dashboard from './pages/Dashboard';
+import CandidateList from './components/CandidateList';
+import CandidateProfile from './components/CandidateProfile';
 import Applications from './pages/Applications';
+import MyBatches from './pages/MyBatches';
+import BatchDetail from './components/BatchDetail';
 import Batches from './pages/Batches';
 import BatchManagement from './pages/BatchManagement';
-import BatchDetail from './pages/BatchDetail';
 import Courses from './pages/Courses';
 import UserManagement from './pages/UserManagement';
 import Placements from './pages/Placements';
@@ -15,12 +17,12 @@ import Notifications from './pages/Notifications';
 
 const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [activePage, setActivePage] = useState('AdminDashboard');
+  const [activePage, setActivePage] = useState('Dashboard');
   const [pageData, setPageData] = useState(null);
 
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
-    setActivePage(user.role === 'admin' ? 'AdminDashboard' : 'Dashboard');
+    setActivePage('Dashboard');
   };
 
   const handleNavigate = (page, data = null) => {
@@ -34,22 +36,20 @@ const App = () => {
 
   const renderPage = () => {
     switch (activePage) {
-      case 'AdminDashboard':
-        return <AdminDashboard />;
-      case 'Courses':
-        return <Courses onNavigate={handleNavigate} />;
-      case 'BatchManagement':
-        return <BatchManagement onNavigate={handleNavigate} />;
-      case 'BatchDetail':
-        return <BatchDetail batch={pageData} onNavigate={handleNavigate} />;
-      case 'UserManagement':
-        return <UserManagement />;
       case 'Dashboard':
-        return <Dashboard />;
+        return <Dashboard currentUser={currentUser} onNavigate={handleNavigate} />;
+      case 'CandidateList':
+        return <CandidateList onNavigate={handleNavigate} />;
+      case 'CandidateProfile':
+        return <CandidateProfile candidateData={pageData} onNavigate={handleNavigate} />;
+      case 'MyBatches':
+        return <MyBatches onNavigate={handleNavigate} />;
+      case 'BatchDetail':
+        return <BatchDetail batchData={pageData} />;
+      case 'Courses':
+        return <UserManagement />;
       case 'Applications':
         return <Applications onNavigate={handleNavigate} />;
-      case 'Batches':
-        return <Batches />;
       case 'Placements':
         return <Placements onNavigate={handleNavigate} />;
       case 'PlacementDetail':
@@ -57,7 +57,7 @@ const App = () => {
       case 'Notifications':
         return <Notifications />;
       default:
-        return <AdminDashboard />;
+        return <Dashboard currentUser={currentUser} />;
     }
   };
 
@@ -65,7 +65,7 @@ const App = () => {
     <div className="flex h-screen bg-gray-50">
       <Sidebar activePage={activePage} onNavigate={handleNavigate} currentUser={currentUser} />
       <main className="flex-1 overflow-auto">
-        <div className="p-8">{renderPage()}</div>
+        {(activePage === 'Dashboard' || activePage === 'MyBatches' || activePage === 'BatchDetail') ? renderPage() : <div className="p-8">{renderPage()}</div>}
       </main>
     </div>
   );

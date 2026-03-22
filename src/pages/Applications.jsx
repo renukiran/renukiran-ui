@@ -95,7 +95,7 @@ const Applications = ({ onNavigate }) => {
     }
   };
 
-  const onSubmit = async (data) => {
+      const onSubmit = async (data) => {
     try {
       setLoading(true);
       setError(null);
@@ -103,7 +103,7 @@ const Applications = ({ onNavigate }) => {
       alert('Application submitted successfully!');
       reset();
       setCurrentStep(1);
-      onNavigate('Dashboard');
+      onNavigate('CandidateList');
     } catch (err) {
       setError('Failed to submit application');
       console.error(err);
@@ -126,7 +126,7 @@ const Applications = ({ onNavigate }) => {
         <ArrowLeft
           size={20}
           className="mr-2 text-gray-600 cursor-pointer hover:text-gray-800"
-          onClick={() => onNavigate('Dashboard')}
+          onClick={() => onNavigate('CandidateList')}
         />
         <h1 className="text-xl font-semibold text-gray-800">New Application</h1>
       </div>

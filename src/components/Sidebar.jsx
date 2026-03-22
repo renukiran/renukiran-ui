@@ -2,7 +2,7 @@ import React from 'react';
 import { Home, FileText, Users, Bookmark, Bell, BookOpen, LayoutGrid, UserCog } from 'lucide-react';
 
 const ADMIN_NAV = [
-  { name: 'AdminDashboard', label: 'Dashboard', icon: LayoutGrid },
+  { name: 'Dashboard', label: 'Dashboard', icon: LayoutGrid },
   { name: 'Courses', label: 'Courses', icon: BookOpen },
   { name: 'BatchManagement', label: 'Batches', icon: Users },
   { name: 'UserManagement', label: 'Users', icon: UserCog },
@@ -11,16 +11,23 @@ const ADMIN_NAV = [
 
 const OC_NAV = [
   { name: 'Dashboard', label: 'Dashboard', icon: Home },
-  { name: 'Applications', label: 'Applications', icon: FileText },
-  { name: 'Batches', label: 'Batches', icon: Users },
+  { name: 'CandidateList', label: 'Applications', icon: FileText },
+  { name: 'BatchManagement', label: 'Batches', icon: Users },
   { name: 'Placements', label: 'Placements', icon: Bookmark },
+  { name: 'Notifications', label: 'Notifications', icon: Bell },
+];
+
+const TRAINER_NAV = [
+  { name: 'Dashboard', label: 'Dashboard', icon: Home },
+  { name: 'MyBatches', label: 'My Batches', icon: BookOpen },
   { name: 'Notifications', label: 'Notifications', icon: Bell },
 ];
 
 const Sidebar = ({ activePage, onNavigate, currentUser }) => {
   const isAdmin = currentUser?.role === 'admin';
-  const navLinks = isAdmin ? ADMIN_NAV : OC_NAV;
-  const roleLabel = isAdmin ? 'Admin' : 'Office Coordinator';
+  const isTrainer = currentUser?.role === 'trainer';
+  const navLinks = isAdmin ? ADMIN_NAV : isTrainer ? TRAINER_NAV : OC_NAV;
+  const roleLabel = isAdmin ? 'Admin' : isTrainer ? 'Trainer' : 'Office Coordinator';
   const initials = currentUser?.name
     ? currentUser.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     : 'U';

@@ -24,7 +24,9 @@ const Login = ({ onLoginSuccess }) => {
       // onLoginSuccess(user);
       console.log('Login with:', { email, password, rememberMe });
       // Mock login for development
-      onLoginSuccess({ email, role: 'admin', name: 'Vijaya Adalath' });
+      //onLoginSuccess({ email, role: 'admin', name: 'Vijaya Adalath' });
+      //onLoginSuccess({ email, role: 'oc', name: 'Vijaya Adalath' });
+      onLoginSuccess({ email, role: 'trainer', name: 'Vijaya Adalath' });
     } catch (err) {
       setError('Invalid email or password. Please try again.');
       console.error(err);
