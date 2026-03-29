@@ -25,8 +25,18 @@ const EMPTY_FORM = {
   status: 'Active',
 };
 
-const AddCourseModal = ({ onClose, onSave }) => {
-  const [form, setForm] = useState(EMPTY_FORM);
+const AddCourseModal = ({ onClose, onSave, initialData }) => {
+  const [form, setForm] = useState(initialData ? {
+    name: initialData.name || '',
+    category: initialData.category || '',
+    duration: String(initialData.durationRaw || ''),
+    maxPerBatch: String(initialData.maxPerBatch || '20'),
+    description: initialData.description || '',
+    mcq: String(initialData.mcq || '30'),
+    practical: String(initialData.practical || '50'),
+    caseStudy: String(initialData.caseStudy || '20'),
+    status: initialData.status || 'Active',
+  } : EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
   const total = (parseInt(form.mcq) || 0) + (parseInt(form.practical) || 0) + (parseInt(form.caseStudy) || 0);
@@ -64,7 +74,7 @@ const AddCourseModal = ({ onClose, onSave }) => {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Add New Course</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{initialData ? 'Edit Course' : 'Add New Course'}</h2>
           <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition">
             <X size={18} />
           </button>
@@ -196,7 +206,7 @@ const AddCourseModal = ({ onClose, onSave }) => {
             Cancel
           </button>
           <button onClick={handleSave} className="h-11 px-6 text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-md transition">
-            Save Course
+            {initialData ? 'Update Course' : 'Save Course'}
           </button>
         </div>
       </div>
@@ -251,6 +261,7 @@ const Courses = ({ onNavigate }) => {
   ]);
 
   const [showModal, setShowModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [loading, setLoading] = useState(false);
@@ -266,14 +277,20 @@ const Courses = ({ onNavigate }) => {
           setCourses(data.map((c, i) => ({
             id: c.id,
             name: c.courseName,
-            status: 'Active',
+            status: c.status || 'Active',
             duration: c.duration ? `${c.duration} months` : '—',
-            maxPerBatch: 20,
+            durationRaw: c.duration,
+            maxPerBatch: c.maxBatchSize || 20,
+            category: c.category || '',
+            description: c.description || '',
+            mcq: parseInt(c.mcqAssessment) || 30,
+            practical: parseInt(c.practicalAssessment) || 50,
+            caseStudy: parseInt(c.caseStudyAssessment) || 20,
             activeBatches: 0,
             assessments: [
-              { label: 'MCQ', weight: 30 },
-              { label: 'Practical', weight: 50 },
-              { label: 'Case Study', weight: 20 },
+              { label: 'MCQ', weight: parseInt(c.mcqAssessment) || 30 },
+              { label: 'Practical', weight: parseInt(c.practicalAssessment) || 50 },
+              { label: 'Case Study', weight: parseInt(c.caseStudyAssessment) || 20 },
             ],
             accent: ACCENT_KEYS[i % ACCENT_KEYS.length],
           })));
@@ -292,12 +309,43 @@ const Courses = ({ onNavigate }) => {
     try {
       const payload = {
         courseName: form.name,
+        category: form.category,
+        duration: parseInt(form.duration) || 0,
+        maxBatchSize: parseInt(form.maxPerBatch) || 20,
+        description: form.description,
+        status: form.status || 'Active',
+        mcqAssessment: String(form.mcq || 30),
+        practicalAssessment: String(form.practical || 50),
+        caseStudyAssessment: String(form.caseStudy || 20),
         instructor: '',
-        duration: parseInt(form.duration),
       };
-      const saved = await courseAPI.createCourse(payload);
-      const nextAccent = ACCENT_KEYS[courses.length % ACCENT_KEYS.length];
-      setCourses((prev) => [
+      if (editingCourse) {
+        await courseAPI.updateCourse(editingCourse.id, payload);
+        const accent = editingCourse.accent;
+        setCourses((prev) => prev.map((c) => c.id === editingCourse.id ? {
+          ...c,
+          name: form.name,
+          status: form.status || 'Active',
+          duration: form.duration ? `${form.duration} months` : '—',
+          durationRaw: parseInt(form.duration) || 0,
+          maxPerBatch: parseInt(form.maxPerBatch) || 20,
+          category: form.category,
+          description: form.description,
+          mcq: parseInt(form.mcq) || 30,
+          practical: parseInt(form.practical) || 50,
+          caseStudy: parseInt(form.caseStudy) || 20,
+          assessments: [
+            { label: 'MCQ', weight: parseInt(form.mcq) || 30 },
+            { label: 'Practical', weight: parseInt(form.practical) || 50 },
+            { label: 'Case Study', weight: parseInt(form.caseStudy) || 20 },
+          ],
+          accent,
+        } : c));
+        setEditingCourse(null);
+      } else {
+        const saved = await courseAPI.createCourse(payload);
+        const nextAccent = ACCENT_KEYS[courses.length % ACCENT_KEYS.length];
+        setCourses((prev) => [
         ...prev,
         {
           id: saved.id,
@@ -316,8 +364,20 @@ const Courses = ({ onNavigate }) => {
         },
       ]);
       setShowModal(false);
-    } catch (err) {
+    }
+  } catch (err) {
       setError('Failed to save course');
+      console.error(err);
+    }
+  };
+
+  const handleDeleteCourse = async (id) => {
+    if (!window.confirm('Delete this course? This cannot be undone.')) return;
+    try {
+      await courseAPI.deleteCourse(id);
+      setCourses((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      setError('Failed to delete course');
       console.error(err);
     }
   };
@@ -435,7 +495,9 @@ const Courses = ({ onNavigate }) => {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <button className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition">
+                  <button
+                    onClick={() => { setEditingCourse(course); setShowModal(false); }}
+                    className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition">
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -448,7 +510,11 @@ const Courses = ({ onNavigate }) => {
                   >
                     View Batches
                   </button>
-                  <button className="w-9 h-9 flex items-center justify-center text-gray-400 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:text-gray-700 transition text-base">
+                  <button
+                    onClick={() => handleDeleteCourse(course.id)}
+                    className="w-9 h-9 flex items-center justify-center text-gray-400 bg-white border border-gray-200 rounded-md hover:bg-red-50 hover:text-red-600 transition text-base"
+                    title="Delete course"
+                  >
                     &hellip;
                   </button>
                 </div>
@@ -460,6 +526,9 @@ const Courses = ({ onNavigate }) => {
 
       {showModal && (
         <AddCourseModal onClose={() => setShowModal(false)} onSave={handleSaveCourse} />
+      )}
+      {editingCourse && (
+        <AddCourseModal initialData={editingCourse} onClose={() => setEditingCourse(null)} onSave={handleSaveCourse} />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { dashboardAPI } from '../services/api';
+import { dashboardAPI, batchAPI, applicationAPI } from '../services/api';
 
 const OPERATIONAL_STATS = [
   { label: 'Total Courses', value: 8, trend: '+2 this quarter', trendDir: 'up', color: '#2563eb' },
@@ -82,30 +82,77 @@ const StatCard = ({ label, value, trend, trendDir, color }) => {
   );
 };
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ currentUser, onNavigate }) => {
   const [apiStats, setApiStats] = useState(null);
+  const [recentApps, setRecentApps] = useState([]);
+  const [batchCapacity, setBatchCapacity] = useState([]);
 
   useEffect(() => {
     dashboardAPI.getAdminStats()
       .then((data) => setApiStats(data))
       .catch((err) => console.error('Failed to load admin stats:', err));
+
+    batchAPI.getBatches()
+      .then((data) => {
+        const list = data?.content ?? (Array.isArray(data) ? data : []);
+        setBatchCapacity(list.slice(0, 4).map((b) => ({
+          name: `${b.batchName ?? b.name ?? '—'}`,
+          enrolled: b.enrolledCount ?? b.currentEnrollment ?? 0,
+          max: b.capacity ?? b.maxCapacity ?? 20,
+        })));
+      })
+      .catch((err) => console.error('Failed to load batches:', err));
+
+    applicationAPI.getApplications()
+      .then((res) => {
+        const list = res?.data ?? (Array.isArray(res) ? res : []);
+        const trackLabel = (t) => {
+          const map = {
+            TAILORING: 'Tailoring', BEAUTY_AND_GROOMING: 'Beauty & Grooming',
+            FOOD_BUSINESS: 'Food Business', HANDICRAFT: 'Handicraft',
+            HOME_BASED_PRODUCTION: 'Home Production', OTHER: 'Other',
+          };
+          return map[t] || t || '—';
+        };
+        setRecentApps(list.slice(0, 5).map((a) => ({
+          name: a.fullName ?? a.full_name ?? '—',
+          course: trackLabel(a.preferredExperienceTrack ?? a.preferred_experience_track),
+          status: 'Applied',
+          date: '',
+        })));
+      })
+      .catch((err) => console.error('Failed to load applications:', err));
   }, []);
+
+  const welcomeName = currentUser?.name?.split(' ')?.[0] || 'Admin';
 
   const operationalStats = apiStats
     ? [
-        { label: 'Total Courses',        value: apiStats.totalCourses    ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
-        { label: 'Active Batches',        value: apiStats.activeBatches   ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
-        { label: 'Candidates Enrolled',   value: apiStats.totalCandidates ?? '—', trend: '', trendDir: 'up',   color: '#16a34a' },
-        { label: 'Pending Assignments',   value: apiStats.pendingApplications ?? '—', trend: '', trendDir: 'down', color: '#d97706' },
+        { label: 'Total Courses',        value: apiStats.totalCourses        ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
+        { label: 'Active Batches',        value: apiStats.activeBatches       ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
+        { label: 'Candidates Enrolled',   value: apiStats.candidatesEnrolled  ?? '—', trend: '', trendDir: 'up',   color: '#16a34a' },
+        { label: 'Pending Assignments',   value: apiStats.pendingAssignments  ?? '—', trend: '', trendDir: 'down', color: '#d97706' },
       ]
     : OPERATIONAL_STATS;
+
+  const impactStats = apiStats
+    ? [
+        { label: 'Assessment Pass Rate', value: apiStats.assessmentPassRate ?? '—', trend: '', trendDir: 'up',   color: '#16a34a' },
+        { label: 'Placement Rate',        value: apiStats.placementRate      ?? '—', trend: `Target: 70%`,        trendDir: 'flat', color: '#d97706' },
+        { label: 'Job Retention',         value: apiStats.jobRetention       ?? '—', trend: '6-month retention', trendDir: 'up',   color: '#16a34a' },
+        { label: 'Avg Attendance',        value: apiStats.avgAttendance      ?? '—', trend: 'Above 80% target',  trendDir: 'up',   color: '#16a34a' },
+      ]
+    : IMPACT_STATS;
+
+  const displayApps   = recentApps.length   > 0 ? recentApps   : RECENT_APPLICATIONS;
+  const displayBatches = batchCapacity.length > 0 ? batchCapacity : BATCH_CAPACITY;
 
   return (
     <div style={{ background: '#f9fafb', padding: '32px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#111827', margin: '0 0 8px 0' }}>Dashboard</h1>
-        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Welcome back, Vijaya. Here's your operational overview.</p>
+        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Welcome back, {welcomeName}. Here's your operational overview.</p>
       </div>
 
       {/* Operational Stats */}
@@ -122,7 +169,7 @@ const AdminDashboard = () => {
       <div style={{ marginBottom: '32px' }}>
         <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Impact Stats</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-          {IMPACT_STATS.map((stat) => (
+          {impactStats.map((stat) => (
             <StatCard key={stat.label} label={stat.label} value={stat.value} trend={stat.trend} trendDir={stat.trendDir} color={stat.color} />
           ))}
         </div>
@@ -132,47 +179,29 @@ const AdminDashboard = () => {
       <div style={{ marginBottom: '32px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', margin: 0 }}>Recent Applications</h2>
-          <a href="#" style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'none', cursor: 'pointer' }}>
+          <button onClick={() => onNavigate && onNavigate('CandidateList')}
+            style={{ fontSize: '13px', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer' }}>
             View All →
-          </a>
+          </button>
         </div>
         <div style={{ background: 'white', borderRadius: '10px', padding: '20px 22px', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', padding: '12px 0' }}>
-                  Name
-                </th>
-                <th style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', padding: '12px 0' }}>
-                  Course
-                </th>
-                <th style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', padding: '12px 0' }}>
-                  Status
-                </th>
-                <th style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', padding: '12px 0' }}>
-                  Date
-                </th>
+                {['Name', 'Course / Track', 'Status', 'Date'].map((h) => (
+                  <th key={h} style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', padding: '12px 0' }}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {RECENT_APPLICATIONS.map((app, idx) => {
+              {displayApps.map((app, idx) => {
                 const badgeStyle = getStatusBadgeStyle(app.status);
                 return (
-                  <tr key={idx} style={{ borderBottom: idx < RECENT_APPLICATIONS.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                  <tr key={idx} style={{ borderBottom: idx < displayApps.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                     <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{app.name}</td>
                     <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{app.course}</td>
                     <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>
-                      <span
-                        style={{
-                          background: badgeStyle.background,
-                          color: badgeStyle.color,
-                          borderRadius: '12px',
-                          padding: '3px 10px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          display: 'inline-block',
-                        }}
-                      >
+                      <span style={{ background: badgeStyle.background, color: badgeStyle.color, borderRadius: '12px', padding: '3px 10px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
                         {app.status}
                       </span>
                     </td>
@@ -190,26 +219,17 @@ const AdminDashboard = () => {
         {/* Batch Capacity */}
         <div style={{ background: 'white', borderRadius: '10px', padding: '20px 22px' }}>
           <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Batch Capacity</h3>
-          <div style={{ space: '16px' }}>
-            {BATCH_CAPACITY.map((batch, idx) => {
-              const pct = Math.round((batch.enrolled / batch.max) * 100);
+          <div>
+            {displayBatches.map((batch, idx) => {
+              const pct = batch.max > 0 ? Math.round((batch.enrolled / batch.max) * 100) : 0;
               return (
-                <div key={idx} style={{ marginBottom: idx < BATCH_CAPACITY.length - 1 ? '16px' : 0 }}>
+                <div key={idx} style={{ marginBottom: idx < displayBatches.length - 1 ? '16px' : 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#111827' }}>{batch.name}</span>
-                    <span style={{ fontSize: '13.5px', color: '#6b7280' }}>
-                      {batch.enrolled}/{batch.max}
-                    </span>
+                    <span style={{ fontSize: '13.5px', color: '#6b7280' }}>{batch.enrolled}/{batch.max}</span>
                   </div>
                   <div style={{ height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div
-                      style={{
-                        height: '100%',
-                        background: getCapacityBarColor(pct),
-                        width: `${pct}%`,
-                        transition: 'width 0.3s ease',
-                      }}
-                    />
+                    <div style={{ height: '100%', background: getCapacityBarColor(pct), width: `${pct}%`, transition: 'width 0.3s ease' }} />
                   </div>
                 </div>
               );

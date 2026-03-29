@@ -24,7 +24,21 @@ export const apiCall = async (endpoint, method = 'GET', data = null) => {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      let errorMsg = `HTTP error! status: ${response.status}`;
+      try {
+        const errBody = await response.json();
+        const detail =
+          (Array.isArray(errBody?.details) && errBody.details.length > 0
+            ? errBody.details.join('; ')
+            : null) ||
+          errBody?.message ||
+          errBody?.error ||
+          (typeof errBody === 'string' ? errBody : null);
+        if (detail) errorMsg = detail;
+      } catch {}
+      const err = new Error(errorMsg);
+      err.status = response.status;
+      throw err;
     }
 
     // 204 No Content — return null without trying to parse JSON
@@ -90,7 +104,15 @@ export const placementAPI = {
 // Notification endpoints — backend: /api/v1/notifications
 export const notificationAPI = {
   getNotifications: () => apiCall('/api/v1/notifications', 'GET'),
+  getUnreadCount: () => apiCall('/api/v1/notifications/unread-count', 'GET'),
+  createNotification: (message) => apiCall('/api/v1/notifications', 'POST', { message }),
   markAsRead: (id) => apiCall(`/api/v1/notifications/${id}/read`, 'PATCH'),
+  markAllAsRead: () => apiCall('/api/v1/notifications/read-all', 'PATCH'),
+};
+
+// Trainer endpoints — backend: /api/v1/trainers
+export const trainerAPI = {
+  getTrainers: () => apiCall('/api/v1/trainers', 'GET'),
 };
 
 // Dashboard endpoints — backend: /api/v1/dashboard

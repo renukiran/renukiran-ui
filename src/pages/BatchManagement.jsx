@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { batchAPI } from '../services/api';
+import { batchAPI, courseAPI, trainerAPI } from '../services/api';
 
 const STATUS_BADGE = {
   Ongoing: 'bg-green-100 text-green-700',
@@ -13,25 +13,32 @@ const capacityBarColor = (pct) => {
   return 'bg-green-500';
 };
 
-const BATCH_COURSES = [
-  'Stitching Basic', 'Computer Fundamentals', 'Beauty Basic',
-  'Bag Making', 'Food Enterprise', 'Handicraft',
-];
+const computeBatchStatus = (startDate, endDate) => {
+  if (!startDate) return 'Upcoming';
+  const today = new Date().toISOString().split('T')[0];
+  if (startDate > today) return 'Upcoming';
+  if (endDate && endDate < today) return 'Completed';
+  return 'Ongoing';
+};
 
-const BATCH_TRAINERS = ['Suman Kumar', 'Raj Patel', 'Asha Mehra', 'Priya T.'];
+const formatDateRange = (s, e) => {
+  if (!s || !e) return '—';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [, sm] = s.split('-');
+  const [ey, em] = e.split('-');
+  return `${months[parseInt(sm) - 1]} – ${months[parseInt(em) - 1]} ${ey}`;
+};
 
 // ── CreateBatchModal ───────────────────────────────────────────────────────────
-const CreateBatchModal = ({ onClose, onSave, nextId }) => {
+const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
   const [form, setForm] = useState({
-    course: '',
-    batchId: nextId,
-    trainer: '',
+    courseId: '',
+    batchName: nextId,
+    trainerId: '',
     location: '',
     startDate: '',
     endDate: '',
     capacity: '20',
-    status: 'Upcoming',
-    notes: '',
   });
   const [errors, setErrors] = useState({});
 
@@ -46,10 +53,9 @@ const CreateBatchModal = ({ onClose, onSave, nextId }) => {
 
   const validate = () => {
     const e = {};
-    if (!form.course) e.course = 'Select a course';
-    if (!form.batchId.trim()) e.batchId = 'Batch ID is required';
-    else if (!/^[A-Za-z0-9]+$/.test(form.batchId.trim())) e.batchId = 'Use alphanumeric code like B6';
-    if (!form.trainer) e.trainer = 'Select a trainer';
+    if (!form.courseId) e.courseId = 'Select a course';
+    if (!form.batchName.trim()) e.batchName = 'Batch name is required';
+    if (!form.trainerId) e.trainerId = 'Select a trainer';
     if (!form.startDate) e.startDate = 'Set a start date';
     if (!form.endDate) e.endDate = 'Set an end date';
     else if (form.startDate && form.endDate < form.startDate) e.endDate = 'End date must be after start date';
@@ -61,25 +67,19 @@ const CreateBatchModal = ({ onClose, onSave, nextId }) => {
 
   const handleSubmit = () => {
     if (!validate()) return;
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const [, sm] = form.startDate.split('-');
-    const [ey, em] = form.endDate.split('-');
-    const dates = `${months[parseInt(sm) - 1]} – ${months[parseInt(em) - 1]} ${ey}`;
     onSave({
-      id: form.batchId.trim().toUpperCase(),
-      course: form.course,
-      trainer: form.trainer,
-      dates,
-      location: form.location,
-      enrolled: 0,
-      max: parseInt(form.capacity),
-      status: form.status,
+      batchName: form.batchName.trim(),
+      courseId: Number(form.courseId),
+      trainerId: Number(form.trainerId),
+      startDate: form.startDate,
+      endDate: form.endDate,
+      capacity: parseInt(form.capacity),
     });
     onClose();
   };
 
   const isValid =
-    form.course && form.batchId.trim() && form.trainer &&
+    form.courseId && form.batchName.trim() && form.trainerId &&
     form.startDate && form.endDate && form.endDate >= form.startDate &&
     Number(form.capacity) >= 1 && Number(form.capacity) <= 100;
 
@@ -112,7 +112,7 @@ const CreateBatchModal = ({ onClose, onSave, nextId }) => {
           {/* Summary strip */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'Batch ID', value: form.batchId || nextId },
+              { label: 'Batch Name', value: form.batchName || nextId },
               { label: 'Capacity', value: `${form.capacity || 20} seats` },
               { label: 'Starts', value: form.startDate ? fmtMonth(form.startDate) : '—' },
             ].map((h) => (
@@ -123,38 +123,38 @@ const CreateBatchModal = ({ onClose, onSave, nextId }) => {
             ))}
           </div>
 
-          {/* Course + Batch ID */}
+          {/* Course + Batch Name */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
                 Course <span className="text-red-500">*</span>
               </label>
               <select
-                value={form.course}
-                onChange={(e) => set('course', e.target.value)}
+                value={form.courseId}
+                onChange={(e) => set('courseId', e.target.value)}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 appearance-none ${
-                  errors.course ? 'border-red-400' : 'border-gray-200'
+                  errors.courseId ? 'border-red-400' : 'border-gray-200'
                 }`}
               >
                 <option value="">Select course...</option>
-                {BATCH_COURSES.map((c) => <option key={c}>{c}</option>)}
+                {(courses || []).map((c) => <option key={c.id} value={c.id}>{c.courseName}</option>)}
               </select>
-              {errors.course && <p className="text-xs text-red-500 mt-1">{errors.course}</p>}
+              {errors.courseId && <p className="text-xs text-red-500 mt-1">{errors.courseId}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                Batch ID <span className="text-red-500">*</span>
+                Batch Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                value={form.batchId}
-                onChange={(e) => set('batchId', e.target.value)}
+                value={form.batchName}
+                onChange={(e) => set('batchName', e.target.value)}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
-                  errors.batchId ? 'border-red-400' : 'border-gray-200'
+                  errors.batchName ? 'border-red-400' : 'border-gray-200'
                 }`}
               />
-              {errors.batchId ? (
-                <p className="text-xs text-red-500 mt-1">{errors.batchId}</p>
+              {errors.batchName ? (
+                <p className="text-xs text-red-500 mt-1">{errors.batchName}</p>
               ) : (
                 <p className="text-xs text-gray-400 mt-1">Auto-filled, editable before save.</p>
               )}
@@ -168,16 +168,16 @@ const CreateBatchModal = ({ onClose, onSave, nextId }) => {
                 Trainer <span className="text-red-500">*</span>
               </label>
               <select
-                value={form.trainer}
-                onChange={(e) => set('trainer', e.target.value)}
+                value={form.trainerId}
+                onChange={(e) => set('trainerId', e.target.value)}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 appearance-none ${
-                  errors.trainer ? 'border-red-400' : 'border-gray-200'
+                  errors.trainerId ? 'border-red-400' : 'border-gray-200'
                 }`}
               >
                 <option value="">Select trainer...</option>
-                {BATCH_TRAINERS.map((t) => <option key={t}>{t}</option>)}
+                {(trainers || []).map((t) => <option key={t.trainerId} value={t.trainerId}>{t.name}</option>)}
               </select>
-              {errors.trainer && <p className="text-xs text-red-500 mt-1">{errors.trainer}</p>}
+              {errors.trainerId && <p className="text-xs text-red-500 mt-1">{errors.trainerId}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">Location</label>
@@ -223,7 +223,7 @@ const CreateBatchModal = ({ onClose, onSave, nextId }) => {
             </div>
           </div>
 
-          {/* Capacity + Status */}
+          {/* Capacity only (status computed from dates) */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
@@ -241,32 +241,13 @@ const CreateBatchModal = ({ onClose, onSave, nextId }) => {
               />
               {errors.capacity && <p className="text-xs text-red-500 mt-1">{errors.capacity}</p>}
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-1.5">Status</label>
-              <div className="flex gap-1.5">
-                {['Upcoming', 'Ongoing', 'Completed'].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => set('status', s)}
-                    className={`flex-1 h-10 text-xs font-semibold rounded-md border transition ${
-                      form.status === s
-                        ? 'bg-blue-700 text-white border-blue-700'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Notes */}
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1.5">Notes for Operations</label>
             <textarea
-              value={form.notes}
+              value={form.notes || ''}
               onChange={(e) => set('notes', e.target.value)}
               placeholder="Optional logistics notes for classroom setup, equipment, or scheduling."
               rows={3}
@@ -306,13 +287,9 @@ const CreateBatchModal = ({ onClose, onSave, nextId }) => {
 };
 
 const BatchManagement = ({ onNavigate }) => {
-  const [batches, setBatches] = useState([
-    { id: 'B1', course: 'Stitching Basic', trainer: 'Suman K.', dates: 'Mar – Jun 2026', enrolled: 18, max: 20, status: 'Ongoing' },
-    { id: 'B2', course: 'Computer Fund.', trainer: 'Raj P.', dates: 'Mar – May 2026', enrolled: 19, max: 20, status: 'Ongoing' },
-    { id: 'B3', course: 'Beauty Basic', trainer: 'Asha M.', dates: 'Apr – Jul 2026', enrolled: 0, max: 20, status: 'Upcoming' },
-    { id: 'B4', course: 'Stitching Basic', trainer: 'Suman K.', dates: 'Jan – Mar 2026', enrolled: 20, max: 20, status: 'Completed' },
-    { id: 'B5', course: 'Bag Making', trainer: 'Priya T.', dates: 'May – Aug 2026', enrolled: 5, max: 20, status: 'Upcoming' },
-  ]);
+  const [batches, setBatches] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [trainers, setTrainers] = useState([]);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [search, setSearch] = useState('');
@@ -327,18 +304,17 @@ const BatchManagement = ({ onNavigate }) => {
         setLoading(true);
         setError(null);
         const data = await batchAPI.getBatches();
-        if (data && data.length > 0) {
-          setBatches(data.map((b) => ({
-            id: b.batchCode,
-            course: b.course,
-            trainer: b.trainer,
-            dates: b.dates || `${b.startDate} – ${b.endDate}`,
-            location: b.location,
-            enrolled: b.enrolled,
-            max: b.max,
-            status: b.status,
-          })));
-        }
+        const list = data?.content ?? (Array.isArray(data) ? data : []);
+        setBatches(list.map((b) => ({
+          rawId: b.id,
+          id: b.batchName,
+          course: b.courseName || '',
+          trainer: b.trainerName || '',
+          dates: formatDateRange(b.startDate, b.endDate),
+          enrolled: 0,
+          max: b.capacity || 0,
+          status: b.status || computeBatchStatus(b.startDate, b.endDate),
+        })));
       } catch (err) {
         setError('Failed to load batches');
         console.error(err);
@@ -346,7 +322,20 @@ const BatchManagement = ({ onNavigate }) => {
         setLoading(false);
       }
     };
+    const fetchCoursesAndTrainers = async () => {
+      try {
+        const [cd, td] = await Promise.all([
+          courseAPI.getCourses(),
+          trainerAPI.getTrainers(),
+        ]);
+        setCourses(Array.isArray(cd) ? cd : []);
+        setTrainers(Array.isArray(td) ? td : []);
+      } catch (err) {
+        console.error('Failed to load courses/trainers', err);
+      }
+    };
     fetchBatches();
+    fetchCoursesAndTrainers();
   }, []);
 
   const courseOptions = ['Course: All', ...new Set(batches.map((b) => b.course))];
@@ -355,27 +344,25 @@ const BatchManagement = ({ onNavigate }) => {
   const handleCreateBatch = async (batch) => {
     try {
       const payload = {
-        batchCode: batch.id,
-        course: batch.course,
-        trainer: batch.trainer,
-        location: batch.location,
-        dates: batch.dates,
-        enrolled: 0,
-        max: batch.max,
-        status: batch.status,
+        batchName: batch.batchName,
+        courseId: batch.courseId,
+        trainerId: batch.trainerId,
+        startDate: batch.startDate,
+        endDate: batch.endDate,
+        capacity: batch.capacity,
       };
       const saved = await batchAPI.createBatch(payload);
       setBatches((prev) => [
         ...prev,
         {
-          id: saved.batchCode,
-          course: saved.course,
-          trainer: saved.trainer,
-          dates: saved.dates,
-          location: saved.location,
-          enrolled: saved.enrolled,
-          max: saved.max,
-          status: saved.status,
+          rawId: saved.id,
+          id: saved.batchName,
+          course: saved.courseName || '',
+          trainer: saved.trainerName || '',
+          dates: formatDateRange(saved.startDate, saved.endDate),
+          enrolled: 0,
+          max: saved.capacity || batch.capacity,
+          status: saved.status || computeBatchStatus(saved.startDate, saved.endDate),
         },
       ]);
     } catch (err) {
@@ -516,6 +503,8 @@ const BatchManagement = ({ onNavigate }) => {
           onClose={() => setShowCreateModal(false)}
           onSave={handleCreateBatch}
           nextId={nextBatchId}
+          courses={courses}
+          trainers={trainers}
         />
       )}
     </div>

@@ -21,7 +21,7 @@ const Login = ({ onLoginSuccess }) => {
       const response = await authAPI.login({ userName: email, password });
       if (response && response.success) {
         if (rememberMe) localStorage.setItem('rememberMe', 'true');
-        onLoginSuccess({ email, role: response.userType || 'admin', name: response.message || email });
+        onLoginSuccess({ email, role: response.userType || 'ADMIN', name: response.userName || email });
       } else {
         setError(response?.message || 'Invalid credentials. Please try again.');
       }
@@ -68,15 +68,15 @@ const Login = ({ onLoginSuccess }) => {
           <form onSubmit={handleSubmit} noValidate>
             <div className="mb-5">
               <label className="block text-sm font-medium text-gray-900 mb-1.5" htmlFor="email">
-                Email address
+                Username
               </label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
+                placeholder="Enter your username"
+                autoComplete="username"
                 className="w-full h-11 px-3.5 text-sm bg-gray-50 border border-gray-200 rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition"
               />
             </div>

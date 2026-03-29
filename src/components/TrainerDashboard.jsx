@@ -1,76 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { batchAPI } from '../services/api';
 
-const BATCHES = [
-  {
-    id: 1,
-    title: 'Stitching Basic — Batch 1',
-    candidates: 18,
-    period: 'Mar 1 – Jun 30, 2026',
-    classProgress: { done: 15, total: 48 },
-    avgAttendance: 84,
-    attendanceMarked: false,
-  },
-  {
-    id: 2,
-    title: 'Computer Fund. — Batch 2',
-    candidates: 19,
-    period: 'Mar 1 – May 31, 2026',
-    classProgress: { done: 22, total: 40 },
-    avgAttendance: 91,
-    attendanceMarked: true,
-  },
-];
+const fmtDate = (d) => {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
-const LOW_ATTENDANCE_ALERTS = [
-  { name: 'Kavita R.', batch: 'Stitching B1', attendance: 68 },
-  { name: 'Anita K.', batch: 'Stitching B1', attendance: 72 },
-];
+const TrainerDashboard = ({ currentUser, onNavigate }) => {
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-const TrainerDashboard = () => {
-  const [batches, setBatches] = useState(BATCHES);
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  useEffect(() => {
+    batchAPI.getBatches()
+      .then(data => {
+        const list = data?.content ?? (Array.isArray(data) ? data : []);
+        setBatches(list.map(b => ({
+          id: b.id,
+          title: b.courseName ? `${b.courseName} — ${b.batchName}` : b.batchName,
+          candidates: b.capacity ?? 0,
+          period: `${fmtDate(b.startDate)} – ${fmtDate(b.endDate)}`,
+          status: b.status ?? 'ACTIVE',
+          attendanceMarked: false,
+        })));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
-  const markAttendance = (batchId) => {
-    setBatches(batches.map(batch =>
-      batch.id === batchId ? { ...batch, attendanceMarked: true } : batch
-    ));
-  };
-
-  if (currentPage === 'batchDetail') {
-    return (
-      <div style={{ padding: '60px', textAlign: 'center', minHeight: '100vh', background: '#f9fafb' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#111827' }}>Batch Detail</h1>
-        <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>This page is under construction.</p>
-        <button
-          onClick={() => setCurrentPage('dashboard')}
-          style={{
-            marginTop: '24px',
-            background: '#2563eb',
-            color: 'white',
-            borderRadius: '8px',
-            padding: '10px 20px',
-            fontSize: '14px',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          ← Go Back
-        </button>
-      </div>
-    );
-  }
+  const welcomeName = currentUser?.name?.split(' ')?.[0] || 'Trainer';
 
   return (
     <div style={{ background: '#f9fafb', padding: '32px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       {/* Page Header */}
       <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#111827', marginBottom: '28px' }}>
-        Welcome, Suman!
+        Welcome, {welcomeName}!
       </h1>
 
       {/* My Active Batches */}
       <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>
         My Active Batches
       </h2>
+      {loading && <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>Loading batches…</p>}
+      {!loading && batches.length === 0 && <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>No batches assigned.</p>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '36px' }}>
         {batches.map(batch => (
           <div
@@ -88,43 +59,9 @@ const TrainerDashboard = () => {
 
             <div style={{ display: 'flex', gap: '24px', marginBottom: '16px' }}>
               <div style={{ fontSize: '13px', color: '#6b7280' }}>
-                <span style={{ fontWeight: 700 }}>{batch.candidates}</span> candidates
+                <span style={{ fontWeight: 700 }}>{batch.candidates}</span> seats
               </div>
               <div style={{ fontSize: '13px', color: '#6b7280' }}>{batch.period}</div>
-            </div>
-
-            <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ fontSize: '13px', color: '#6b7280', width: '120px' }}>Class Progress</div>
-              <div style={{ flex: 1, height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    height: '8px',
-                    background: '#2563eb',
-                    borderRadius: '4px',
-                    width: `${(batch.classProgress.done / batch.classProgress.total) * 100}%`,
-                  }}
-                />
-              </div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', width: '48px', textAlign: 'right' }}>
-                {Math.round((batch.classProgress.done / batch.classProgress.total) * 100)}%
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ fontSize: '13px', color: '#6b7280', width: '120px' }}>Avg Attendance</div>
-              <div style={{ flex: 1, height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    height: '8px',
-                    background: '#16a34a',
-                    borderRadius: '4px',
-                    width: `${batch.avgAttendance}%`,
-                  }}
-                />
-              </div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', width: '48px', textAlign: 'right' }}>
-                {batch.avgAttendance}%
-              </div>
             </div>
 
             <div
@@ -135,13 +72,13 @@ const TrainerDashboard = () => {
                 color: batch.attendanceMarked ? '#16a34a' : '#d97706',
               }}
             >
-              Today's attendance: {batch.attendanceMarked ? '✓ Marked' : 'Not yet marked'}
+              Today&apos;s attendance: {batch.attendanceMarked ? '✓ Marked' : 'Not yet marked'}
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
               {!batch.attendanceMarked && (
                 <button
-                  onClick={() => markAttendance(batch.id)}
+                  onClick={() => setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, attendanceMarked: true } : b))}
                   style={{
                     background: '#16a34a',
                     color: 'white',
@@ -157,7 +94,7 @@ const TrainerDashboard = () => {
                 </button>
               )}
               <button
-                onClick={() => setCurrentPage('batchDetail')}
+                onClick={() => onNavigate && onNavigate('MyBatches')}
                 style={{
                   background: '#fff',
                   border: '1px solid #d1d5db',
@@ -180,7 +117,7 @@ const TrainerDashboard = () => {
         Low Attendance Alerts
       </h2>
       <div>
-        {LOW_ATTENDANCE_ALERTS.map((alert, index) => (
+        {[].map((alert, index) => (
           <div
             key={index}
             style={{

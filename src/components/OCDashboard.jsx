@@ -1,17 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { applicationAPI, dashboardAPI } from '../services/api';
 
-const STAT_CARDS = [
-  { label: 'New Applications', value: 12, color: '#2563eb' },
-  { label: 'Under Review', value: 8, color: '#d97706' },
-  { label: 'Assigned to Batch', value: 98, color: '#16a34a' },
-  { label: 'Pending Placement', value: 15, color: '#ea580c' },
-];
-
-const RECENT_APPLICATIONS = [
-  { name: 'Lakshmi Devi', course: 'Stitching Basic', status: 'New', date: 'Mar 10, 2026' },
-  { name: 'Anita Rao', course: 'Computer Fund.', status: 'Under Review', date: 'Mar 9, 2026' },
-  { name: 'Fatima Begum', course: 'Beauty Basic', status: 'Assigned', date: 'Mar 8, 2026' },
-];
+const TRACK_LABELS = {
+  TAILORING: 'Tailoring',
+  BEAUTY_AND_GROOMING: 'Beauty & Grooming',
+  FOOD_BUSINESS: 'Food Business',
+  HANDICRAFT: 'Handicraft',
+  HOME_BASED_PRODUCTION: 'Home-Based Prod.',
+  OTHER: 'Other',
+};
 
 const UPCOMING_FOLLOWUPS = [
   { name: 'Meena Kumari', type: '1-month follow-up', date: 'Mar 12, 2026', timing: 'Tomorrow', timingColor: '#374151' },
@@ -52,18 +49,47 @@ const StatCard = ({ label, value, color }) => {
   );
 };
 
-const OCDashboard = ({ onNavigate }) => {
+const OCDashboard = ({ currentUser, onNavigate }) => {
+  const [apiStats, setApiStats] = useState(null);
+  const [recentApps, setRecentApps] = useState([]);
+
+  useEffect(() => {
+    dashboardAPI.getAdminStats()
+      .then(res => setApiStats(res))
+      .catch(() => {});
+    applicationAPI.getApplications()
+      .then(res => {
+        const list = res?.data ?? (Array.isArray(res) ? res : []);
+        setRecentApps(list.slice(0, 5).map(a => ({
+          name: a.fullName ?? '—',
+          course: TRACK_LABELS[a.preferredExperienceTrack] ?? a.preferredExperienceTrack ?? '—',
+          status: 'New',
+          date: '—',
+        })));
+      })
+      .catch(() => {});
+  }, []);
+
+  const welcomeName = currentUser?.name?.split(' ')?.[0] || 'Coordinator';
+
+  const statCards = [
+    { label: 'New Applications',  value: apiStats ? recentApps.length : '—',             color: '#2563eb' },
+    { label: 'Under Review',      value: apiStats?.pendingAssignments ?? '—',             color: '#d97706' },
+    { label: 'Assigned to Batch', value: apiStats?.candidatesEnrolled ?? '—',             color: '#16a34a' },
+    { label: 'Pending Placement', value: apiStats?.activeBatches ?? '—',                  color: '#ea580c' },
+  ];
+
   return (
     <div style={{ background: '#f9fafb', padding: '32px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#111827', margin: '0 0 8px 0' }}>Dashboard</h1>
-        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Welcome back, Rekha. Here's your overview.</p>
+        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Welcome back, {welcomeName}. Here&apos;s your overview.</p>
       </div>
 
       {/* Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
-        {STAT_CARDS.map((card) => (
+        {statCards.map((card) => (
           <StatCard key={card.label} label={card.label} value={card.value} color={card.color} />
         ))}
       </div>
@@ -125,9 +151,9 @@ const OCDashboard = ({ onNavigate }) => {
         <div style={{ background: 'white', borderRadius: '10px', padding: '20px 22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', margin: 0 }}>Recent Applications</h3>
-            <a href="#" style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'none', cursor: 'pointer' }}>
+            <button onClick={() => onNavigate && onNavigate('Applications')} style={{ fontSize: '13px', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               View All →
-            </a>
+            </button>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -147,10 +173,10 @@ const OCDashboard = ({ onNavigate }) => {
               </tr>
             </thead>
             <tbody>
-              {RECENT_APPLICATIONS.map((app, idx) => {
+              {recentApps.map((app, idx) => {
                 const badgeStyle = getStatusBadgeStyle(app.status);
                 return (
-                  <tr key={idx} style={{ borderBottom: idx < RECENT_APPLICATIONS.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                  <tr key={idx} style={{ borderBottom: idx < recentApps.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                     <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{app.name}</td>
                     <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{app.course}</td>
                     <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>

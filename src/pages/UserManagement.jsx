@@ -48,6 +48,75 @@ const TRAINER_COURSES = [
   { id: 'handicraft', label: 'Handicraft', icon: '🎨' },
 ];
 
+// ── EditUserModal ───────────────────────────────────────────────────────
+const EditUserModal = ({ user, onClose, onSave }) => {
+  const [form, setForm] = useState({ name: user.name || '', email: user.email || '', phone: '', password: '' });
+  const [showPwd, setShowPwd] = useState(false);
+  const [errors, setErrors] = useState({});
+  const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
+
+  const validate = () => {
+    const e = {};
+    if (!form.name.trim()) e.name = 'Full name is required';
+    if (!form.email.trim()) e.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validate()) return;
+    onSave(user.id, { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), password: form.password.trim() || null });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
+          <div className="text-lg font-bold text-gray-900">Edit User &mdash; {user.name}</div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 text-xl">&times;</button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">Full Name <span className="text-red-500">*</span></label>
+            <input type="text" value={form.name} onChange={(e) => set('name', e.target.value)}
+              className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 ${errors.name ? 'border-red-400' : 'border-gray-200'}`} />
+            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1.5">Email <span className="text-red-500">*</span></label>
+              <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)}
+                className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 ${errors.email ? 'border-red-400' : 'border-gray-200'}`} />
+              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1.5">Phone</label>
+              <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="9876543210"
+                className="w-full h-10 px-3 text-sm border border-gray-200 rounded-md outline-none focus:border-blue-600" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">New Password <span className="text-xs font-normal text-gray-400">(leave blank to keep current)</span></label>
+            <div className="flex gap-2">
+              <input type={showPwd ? 'text' : 'password'} value={form.password} onChange={(e) => set('password', e.target.value)}
+                placeholder="Enter new password"
+                className="flex-1 h-10 px-3 text-sm border border-gray-200 rounded-md outline-none focus:border-blue-600" />
+              <button type="button" onClick={() => { set('password', genPassword()); setShowPwd(true); }}
+                className="h-10 px-3 text-xs bg-gray-50 border border-gray-200 rounded-md text-gray-600 hover:bg-gray-100">&uarr; Gen</button>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+          <button onClick={onClose} className="h-10 px-5 text-sm text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
+          <button onClick={handleSubmit} className="h-10 px-5 text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-md">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── UserFormModal ─────────────────────────────────────────────────────────────
 const UserFormModal = ({ role, onClose, onSave }) => {
   const isOC = role === 'Office Coord.';
@@ -77,7 +146,7 @@ const UserFormModal = ({ role, onClose, onSave }) => {
     if (!validate()) return;
     const words = form.name.trim().split(/\s+/);
     const initials = ((words[0]?.[0] ?? '') + (words[1]?.[0] ?? '')).toUpperCase();
-    onSave({ name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), role, initials, active: true });
+    onSave({ name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), password: form.password, role, initials, active: true });
     onClose();
   };
 
@@ -300,6 +369,7 @@ const UserManagement = () => {
 
   const [showOCModal, setShowOCModal] = useState(false);
   const [showTrainerModal, setShowTrainerModal] = useState(false);
+  const [editUser, setEditUser] = useState(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('Role: All');
   const [statusFilter, setStatusFilter] = useState('Status: All');
@@ -315,8 +385,12 @@ const UserManagement = () => {
         if (data && data.length > 0) {
           setUsers(data.map((u) => ({
             id: u.id,
-            initials: ((u.firstName?.[0] ?? '') + (u.lastName?.[0] ?? '')).toUpperCase() || u.username?.[0]?.toUpperCase() || '?',
-            name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.username,
+            initials: (u.firstName && u.lastName && u.firstName !== u.lastName
+              ? (u.firstName[0] + u.lastName[0])
+              : (u.firstName?.[0] ?? u.lastName?.[0] ?? u.username?.[0] ?? '?')).toUpperCase(),
+                name: (u.firstName && u.lastName && u.firstName !== u.lastName
+              ? `${u.firstName} ${u.lastName}`
+              : u.firstName || u.lastName || '').trim() || u.username,
             email: u.email,
             role: u.userType ?? 'Trainer',
             active: u.active ?? true,
@@ -344,33 +418,79 @@ const UserManagement = () => {
 
   const handleAddUser = async (user) => {
     try {
-      const [firstName = '', ...rest] = user.name.split(' ');
-      const lastName = rest.join(' ');
+      const [firstName = '', ...rest] = user.name.trim().split(/\s+/);
+      const lastName = rest.join(' ') || '';
+      const rawUserName = user.email.split('@')[0].replace(/[^A-Za-z0-9]/g, '');
+      const padded = rawUserName.length >= 4 ? rawUserName : rawUserName.padEnd(4, '0');
+      const userName = padded.substring(0, 20);
+      let phone = null;
+      if (user.phone && user.phone.trim()) {
+        const digits = user.phone.trim().replace(/^\+91/, '').replace(/\D/g, '').slice(0, 10);
+        if (digits.length === 10) phone = `+91${digits}`;
+      }
       const payload = {
-        userName: user.email.split('@')[0],
-        password: 'TempPass@123',
+        userName,
+        password: user.password || 'TempPass@123',
         email: user.email,
-        phone: user.phone || '',
+        phone,
         firstName,
         lastName,
-        skills: [],
+        skills: null,
         userType: user.role === 'Office Coord.' ? 'OC' : 'TRAINER',
       };
       const saved = await userAPI.createUser(payload);
+      const words = user.name.trim().split(/\s+/);
+      const initials = ((words[0]?.[0] ?? '') + (words[1]?.[0] ?? '')).toUpperCase() || words[0]?.[0]?.toUpperCase() || '?';
       setUsers((prev) => [
         ...prev,
         {
           id: saved.id,
-          initials: user.initials,
-          name: user.name,
+          initials,
+          name: user.name.trim(),
           email: user.email,
           role: user.role,
           active: true,
         },
       ]);
+      setShowOCModal(false);
+      setShowTrainerModal(false);
     } catch (err) {
-      setError('Failed to create user');
-      console.error(err);
+      const msg = err?.message || 'Unknown error';
+      setError(`Failed to create user: ${msg}`);
+      console.error('createUser error:', err);
+    }
+  };
+
+  const handleEditUser = async (id, changes) => {
+    try {
+      const target = users.find((u) => u.id === id);
+      const [firstName = '', ...rest] = changes.name.trim().split(/\s+/);
+      const lastName = rest.join(' ') || '';
+      const rawUserName = changes.email.split('@')[0];
+      const userName = rawUserName.length >= 4 ? rawUserName : rawUserName.padEnd(4, '0');
+      let phone = null;
+      if (changes.phone && changes.phone.trim()) {
+        const digits = changes.phone.trim().replace(/^\+91/, '').replace(/\D/g, '').slice(0, 10);
+        if (digits.length === 10) phone = `+91${digits}`;
+      }
+      const payload = {
+        userName,
+        ...(changes.password ? { password: changes.password } : {}),
+        email: changes.email,
+        phone,
+        firstName,
+        lastName,
+        skills: null,
+        userType: target?.role === 'Office Coord.' ? 'OC' : 'TRAINER',
+      };
+      await userAPI.updateUser(id, payload);
+      const words = changes.name.trim().split(/\s+/);
+      const initials = ((words[0]?.[0] ?? '') + (words[1]?.[0] ?? '')).toUpperCase();
+      setUsers((prev) => prev.map((u) => u.id === id ? { ...u, name: changes.name, email: changes.email, initials } : u));
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Unknown error';
+      setError(`Failed to update user: ${msg}`);
+      console.error('updateUser error:', err);
     }
   };
 
@@ -486,6 +606,7 @@ const UserManagement = () => {
                     <td className="px-4 py-3.5">
                       <div className="flex gap-2">
                         <button
+                          onClick={() => setEditUser(u)}
                           className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition text-sm"
                           title="Edit"
                         >
@@ -516,6 +637,9 @@ const UserManagement = () => {
       )}
       {showTrainerModal && (
         <UserFormModal role="Trainer" onClose={() => setShowTrainerModal(false)} onSave={handleAddUser} />
+      )}
+      {editUser && (
+        <EditUserModal user={editUser} onClose={() => setEditUser(null)} onSave={handleEditUser} />
       )}
     </div>
   );

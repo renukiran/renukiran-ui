@@ -23,9 +23,10 @@ const TRAINER_NAV = [
   { name: 'Notifications', label: 'Notifications', icon: Bell },
 ];
 
-const Sidebar = ({ activePage, onNavigate, currentUser }) => {
-  const isAdmin = currentUser?.role === 'admin';
-  const isTrainer = currentUser?.role === 'trainer';
+const Sidebar = ({ activePage, onNavigate, currentUser, notificationCount = 0 }) => {
+  const role = (currentUser?.role || '').toUpperCase();
+  const isAdmin = role === 'ADMIN';
+  const isTrainer = role === 'TRAINER';
   const navLinks = isAdmin ? ADMIN_NAV : isTrainer ? TRAINER_NAV : OC_NAV;
   const roleLabel = isAdmin ? 'Admin' : isTrainer ? 'Trainer' : 'Office Coordinator';
   const initials = currentUser?.name
@@ -65,7 +66,12 @@ const Sidebar = ({ activePage, onNavigate, currentUser }) => {
               size={18}
               className={`mr-3 ${activePage === name ? 'text-blue-600' : 'text-gray-400'}`}
             />
-            {label}
+            <span className="flex-1 text-left">{label}</span>
+            {name === 'Notifications' && notificationCount > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </span>
+            )}
           </button>
         ))}
       </nav>
