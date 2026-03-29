@@ -1,5 +1,6 @@
 // API Service with JWT token handling
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+// Base URL: empty string uses CRA dev proxy (setupProxy.js); set REACT_APP_API_URL for direct backend access
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('jwtToken');
@@ -26,6 +27,9 @@ export const apiCall = async (endpoint, method = 'GET', data = null) => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
+    // 204 No Content — return null without trying to parse JSON
+    if (response.status === 204) return null;
+
     return await response.json();
   } catch (error) {
     console.error('API call failed:', error);
@@ -33,46 +37,14 @@ export const apiCall = async (endpoint, method = 'GET', data = null) => {
   }
 };
 
-// Application endpoints
-export const applicationAPI = {
-  submitApplication: (formData) => apiCall('/applications', 'POST', formData),
-  getApplications: () => apiCall('/applications', 'GET'),
-  getApplicationById: (id) => apiCall(`/applications/${id}`, 'GET'),
-  updateApplication: (id, formData) => apiCall(`/applications/${id}`, 'PUT', formData),
-};
-
-// Batch endpoints
-export const batchAPI = {
-  getBatches: () => apiCall('/batches', 'GET'),
-  getBatchById: (id) => apiCall(`/batches/${id}`, 'GET'),
-};
-
-// Placement endpoints
-export const placementAPI = {
-  getPlacements: () => apiCall('/placements', 'GET'),
-  getPlacementById: (id) => apiCall(`/placements/${id}`, 'GET'),
-};
-
-// Notification endpoints
-export const notificationAPI = {
-  getNotifications: () => apiCall('/notifications', 'GET'),
-  markAsRead: (id) => apiCall(`/notifications/${id}/read`, 'PATCH'),
-};
-
-// Dashboard endpoints
-export const dashboardAPI = {
-  getStats: () => apiCall('/dashboard/stats', 'GET'),
-  getAdminStats: () => apiCall('/dashboard/admin-stats', 'GET'),
-};
-
-// Auth endpoints
+// Auth endpoints — backend: POST /auth/admin
 export const authAPI = {
-  login: (credentials) => apiCall('/auth/login', 'POST', credentials),
-  logout: () => apiCall('/auth/logout', 'POST'),
+  login: (credentials) => apiCall('/auth/admin', 'POST', credentials),
+  logout: () => Promise.resolve(),
   forgotPassword: (email) => apiCall('/auth/forgot-password', 'POST', { email }),
 };
 
-// Course endpoints
+// Course endpoints — backend: /courses
 export const courseAPI = {
   getCourses: () => apiCall('/courses', 'GET'),
   getCourseById: (id) => apiCall(`/courses/${id}`, 'GET'),
@@ -81,11 +53,56 @@ export const courseAPI = {
   deleteCourse: (id) => apiCall(`/courses/${id}`, 'DELETE'),
 };
 
-// User/staff endpoints
-export const userAPI = {
-  getUsers: () => apiCall('/users', 'GET'),
-  getUserById: (id) => apiCall(`/users/${id}`, 'GET'),
-  createUser: (data) => apiCall('/users', 'POST', data),
-  updateUser: (id, data) => apiCall(`/users/${id}`, 'PUT', data),
-  toggleUserStatus: (id) => apiCall(`/users/${id}/toggle-status`, 'PATCH'),
+// Batch endpoints — backend: /api/v1/batches
+export const batchAPI = {
+  getBatches: () => apiCall('/api/v1/batches', 'GET'),
+  getBatchById: (id) => apiCall(`/api/v1/batches/${id}`, 'GET'),
+  createBatch: (data) => apiCall('/api/v1/batches', 'POST', data),
+  updateBatch: (id, data) => apiCall(`/api/v1/batches/${id}`, 'PUT', data),
+  deleteBatch: (id) => apiCall(`/api/v1/batches/${id}`, 'DELETE'),
 };
+
+// Candidate endpoints — backend: /api/v1/candidates
+export const candidateAPI = {
+  getCandidates: () => apiCall('/api/v1/candidates', 'GET'),
+  getCandidateById: (id) => apiCall(`/api/v1/candidates/${id}`, 'GET'),
+};
+
+// User/staff endpoints — backend: /api/v1/users
+export const userAPI = {
+  getUsers: () => apiCall('/api/v1/users', 'GET'),
+  getUserById: (id) => apiCall(`/api/v1/users/${id}`, 'GET'),
+  createUser: (data) => apiCall('/api/v1/users', 'POST', data),
+  updateUser: (id, data) => apiCall(`/api/v1/users/${id}`, 'PUT', data),
+  deleteUser: (id) => apiCall(`/api/v1/users/${id}`, 'DELETE'),
+  toggleUserStatus: (id) => apiCall(`/api/v1/users/${id}/toggle-status`, 'PATCH'),
+};
+
+// Placement endpoints — backend: /api/v1/placements
+export const placementAPI = {
+  getPlacements: () => apiCall('/api/v1/placements', 'GET'),
+  getPlacementById: (id) => apiCall(`/api/v1/placements/${id}`, 'GET'),
+  createPlacement: (data) => apiCall('/api/v1/placements', 'POST', data),
+  updatePlacement: (id, data) => apiCall(`/api/v1/placements/${id}`, 'PUT', data),
+  deletePlacement: (id) => apiCall(`/api/v1/placements/${id}`, 'DELETE'),
+};
+
+// Notification endpoints — backend: /api/v1/notifications
+export const notificationAPI = {
+  getNotifications: () => apiCall('/api/v1/notifications', 'GET'),
+  markAsRead: (id) => apiCall(`/api/v1/notifications/${id}/read`, 'PATCH'),
+};
+
+// Dashboard endpoints — backend: /api/v1/dashboard
+export const dashboardAPI = {
+  getAdminStats: () => apiCall('/api/v1/dashboard/admin-stats', 'GET'),
+};
+
+// Application form endpoints — backend: /applicationForm
+export const applicationAPI = {
+  submitApplication: (formData) => apiCall('/applicationForm', 'POST', formData),
+  getApplications: () => apiCall('/applicationForm', 'GET'),
+  getApplicationById: (id) => apiCall(`/applicationForm/${id}`, 'GET'),
+  updateApplication: (id, formData) => apiCall(`/applicationForm/${id}`, 'PUT', formData),
+};
+

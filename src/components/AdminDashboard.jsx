@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { dashboardAPI } from '../services/api';
 
 const OPERATIONAL_STATS = [
   { label: 'Total Courses', value: 8, trend: '+2 this quarter', trendDir: 'up', color: '#2563eb' },
@@ -82,6 +83,23 @@ const StatCard = ({ label, value, trend, trendDir, color }) => {
 };
 
 const AdminDashboard = () => {
+  const [apiStats, setApiStats] = useState(null);
+
+  useEffect(() => {
+    dashboardAPI.getAdminStats()
+      .then((data) => setApiStats(data))
+      .catch((err) => console.error('Failed to load admin stats:', err));
+  }, []);
+
+  const operationalStats = apiStats
+    ? [
+        { label: 'Total Courses',        value: apiStats.totalCourses    ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
+        { label: 'Active Batches',        value: apiStats.activeBatches   ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
+        { label: 'Candidates Enrolled',   value: apiStats.totalCandidates ?? '—', trend: '', trendDir: 'up',   color: '#16a34a' },
+        { label: 'Pending Assignments',   value: apiStats.pendingApplications ?? '—', trend: '', trendDir: 'down', color: '#d97706' },
+      ]
+    : OPERATIONAL_STATS;
+
   return (
     <div style={{ background: '#f9fafb', padding: '32px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       {/* Header */}
@@ -94,7 +112,7 @@ const AdminDashboard = () => {
       <div style={{ marginBottom: '32px' }}>
         <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Operational Stats</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-          {OPERATIONAL_STATS.map((stat) => (
+          {operationalStats.map((stat) => (
             <StatCard key={stat.label} label={stat.label} value={stat.value} trend={stat.trend} trendDir={stat.trendDir} color={stat.color} />
           ))}
         </div>

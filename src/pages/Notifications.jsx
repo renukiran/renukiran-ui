@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { notificationAPI } from '../services/api';
 
 const Notifications = () => {
-  // eslint-disable-next-line no-unused-vars
-  // eslint-disable-next-line no-unused-vars
   const [notifications, setNotifications] = useState([
     { message: 'New application submitted', time: '2 hrs ago' },
     { message: 'Batch 1 starts in 5 days', time: '1 day ago' },
@@ -16,10 +15,15 @@ const Notifications = () => {
       try {
         setLoading(true);
         setError(null);
-        // Placeholder for API call to fetch notifications
-        console.log('Fetching notifications...');
-        // const response = await notificationAPI.getNotifications();
-        // setNotifications(response.data);
+        const data = await notificationAPI.getNotifications();
+        if (data && data.length > 0) {
+          setNotifications(data.map((n) => ({
+            id: n.id,
+            message: n.message ?? n.title ?? '—',
+            time: n.createdAt ?? n.time ?? '',
+            read: n.read ?? false,
+          })));
+        }
       } catch (err) {
         setError('Failed to load notifications');
         console.error(err);
@@ -30,6 +34,16 @@ const Notifications = () => {
 
     fetchNotifications();
   }, []);
+
+  const handleMarkAsRead = async (id) => {
+    if (!id) return;
+    try {
+      await notificationAPI.markAsRead(id);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -48,9 +62,22 @@ const Notifications = () => {
       ) : (
         <div className="space-y-3">
           {notifications.map((notif, idx) => (
-            <div key={idx} className="bg-white p-4 rounded-lg border border-gray-200 flex justify-between items-center">
+            <div
+              key={notif.id ?? idx}
+              className={`bg-white p-4 rounded-lg border flex justify-between items-center ${notif.read ? 'border-gray-100 opacity-60' : 'border-gray-200'}`}
+            >
               <p className="text-gray-800">{notif.message}</p>
-              <p className="text-gray-500 text-sm">{notif.time}</p>
+              <div className="flex items-center gap-3">
+                <p className="text-gray-500 text-sm">{notif.time}</p>
+                {notif.id && !notif.read && (
+                  <button
+                    onClick={() => handleMarkAsRead(notif.id)}
+                    className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 px-2 py-0.5 rounded transition"
+                  >
+                    Mark read
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { batchAPI } from '../services/api';
 
 const STATUS_BADGE = {
   Ongoing: 'bg-green-100 text-green-700',
@@ -325,9 +326,19 @@ const BatchManagement = ({ onNavigate }) => {
       try {
         setLoading(true);
         setError(null);
-        // const response = await batchAPI.getBatches();
-        // setBatches(response.data);
-        console.log('Fetching batches...');
+        const data = await batchAPI.getBatches();
+        if (data && data.length > 0) {
+          setBatches(data.map((b) => ({
+            id: b.batchCode,
+            course: b.course,
+            trainer: b.trainer,
+            dates: b.dates || `${b.startDate} – ${b.endDate}`,
+            location: b.location,
+            enrolled: b.enrolled,
+            max: b.max,
+            status: b.status,
+          })));
+        }
       } catch (err) {
         setError('Failed to load batches');
         console.error(err);
@@ -341,8 +352,36 @@ const BatchManagement = ({ onNavigate }) => {
   const courseOptions = ['Course: All', ...new Set(batches.map((b) => b.course))];
   const nextBatchId = `B${batches.length + 1}`;
 
-  const handleCreateBatch = (batch) => {
-    setBatches((prev) => [...prev, batch]);
+  const handleCreateBatch = async (batch) => {
+    try {
+      const payload = {
+        batchCode: batch.id,
+        course: batch.course,
+        trainer: batch.trainer,
+        location: batch.location,
+        dates: batch.dates,
+        enrolled: 0,
+        max: batch.max,
+        status: batch.status,
+      };
+      const saved = await batchAPI.createBatch(payload);
+      setBatches((prev) => [
+        ...prev,
+        {
+          id: saved.batchCode,
+          course: saved.course,
+          trainer: saved.trainer,
+          dates: saved.dates,
+          location: saved.location,
+          enrolled: saved.enrolled,
+          max: saved.max,
+          status: saved.status,
+        },
+      ]);
+    } catch (err) {
+      setError('Failed to create batch');
+      console.error(err);
+    }
   };
 
   const filtered = batches.filter((b) => {

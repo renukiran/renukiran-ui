@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { userAPI } from '../services/api';
 
 const ROLE_CONFIG = {
   Admin: { className: 'bg-blue-100 text-blue-700' },
@@ -310,9 +311,17 @@ const UserManagement = () => {
       try {
         setLoading(true);
         setError(null);
-        // const response = await userAPI.getUsers();
-        // setUsers(response.data);
-        console.log('Fetching users...');
+        const data = await userAPI.getUsers();
+        if (data && data.length > 0) {
+          setUsers(data.map((u) => ({
+            id: u.id,
+            initials: ((u.firstName?.[0] ?? '') + (u.lastName?.[0] ?? '')).toUpperCase() || u.username?.[0]?.toUpperCase() || '?',
+            name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.username,
+            email: u.email,
+            role: u.userType ?? 'Trainer',
+            active: u.active ?? true,
+          })));
+        }
       } catch (err) {
         setError('Failed to load users');
         console.error(err);
@@ -323,12 +332,46 @@ const UserManagement = () => {
     fetchUsers();
   }, []);
 
-  const toggleStatus = (id) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, active: !u.active } : u)));
+  const toggleStatus = async (id) => {
+    try {
+      const updated = await userAPI.toggleUserStatus(id);
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, active: updated.active } : u)));
+    } catch (err) {
+      setError('Failed to update user status');
+      console.error(err);
+    }
   };
 
-  const handleAddUser = (user) => {
-    setUsers((prev) => [...prev, { id: Date.now(), ...user }]);
+  const handleAddUser = async (user) => {
+    try {
+      const [firstName = '', ...rest] = user.name.split(' ');
+      const lastName = rest.join(' ');
+      const payload = {
+        userName: user.email.split('@')[0],
+        password: 'TempPass@123',
+        email: user.email,
+        phone: user.phone || '',
+        firstName,
+        lastName,
+        skills: [],
+        userType: user.role === 'Office Coord.' ? 'OC' : 'TRAINER',
+      };
+      const saved = await userAPI.createUser(payload);
+      setUsers((prev) => [
+        ...prev,
+        {
+          id: saved.id,
+          initials: user.initials,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          active: true,
+        },
+      ]);
+    } catch (err) {
+      setError('Failed to create user');
+      console.error(err);
+    }
   };
 
   const filtered = users.filter((u) => {

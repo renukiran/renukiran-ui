@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { placementAPI } from '../services/api';
 
 const STATUS_BADGE = {
   Active: 'bg-green-100 text-green-700',
@@ -46,11 +47,25 @@ const Placements = ({ onNavigate }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchPlacements = async () => {
       try {
         setLoading(true);
-        // const response = await placementAPI.getPlacements();
-        // setPlacements(response.data);
+        const data = await placementAPI.getPlacements();
+        if (data && data.length > 0) {
+          setPlacements(data.map((p) => ({
+            id: p.id,
+            name: p.candidateName ?? p.name ?? '—',
+            employer: p.employer ?? '—',
+            role: p.jobTitle ?? p.role ?? '—',
+            salary: p.salary ?? 0,
+            placedDate: p.placedDate ?? '—',
+            status: p.status ?? 'Active',
+            course: p.course ?? '—',
+            batch: p.batchCode ?? p.batch ?? '—',
+            assessment: p.assessmentScore ?? '—',
+            followups: p.followups ?? [],
+          })));
+        }
       } catch (err) {
         setError('Failed to load placements');
         console.error(err);
@@ -58,7 +73,7 @@ const Placements = ({ onNavigate }) => {
         setLoading(false);
       }
     };
-    fetch();
+    fetchPlacements();
   }, []);
 
   const courses = ['All Courses', ...new Set(placements.map((p) => p.course))];

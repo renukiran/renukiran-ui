@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { authAPI } from '../services/api';
 
 const Login = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
@@ -17,16 +18,13 @@ const Login = ({ onLoginSuccess }) => {
     try {
       setLoading(true);
       setError(null);
-      // const response = await authAPI.login({ email, password });
-      // const { token, user } = response;
-      // localStorage.setItem('jwtToken', token);
-      // if (rememberMe) localStorage.setItem('rememberMe', 'true');
-      // onLoginSuccess(user);
-      console.log('Login with:', { email, password, rememberMe });
-      // Mock login for development
-      //onLoginSuccess({ email, role: 'admin', name: 'Vijaya Adalath' });
-      //onLoginSuccess({ email, role: 'oc', name: 'Vijaya Adalath' });
-      onLoginSuccess({ email, role: 'trainer', name: 'Vijaya Adalath' });
+      const response = await authAPI.login({ userName: email, password });
+      if (response && response.success) {
+        if (rememberMe) localStorage.setItem('rememberMe', 'true');
+        onLoginSuccess({ email, role: response.userType || 'admin', name: response.message || email });
+      } else {
+        setError(response?.message || 'Invalid credentials. Please try again.');
+      }
     } catch (err) {
       setError('Invalid email or password. Please try again.');
       console.error(err);

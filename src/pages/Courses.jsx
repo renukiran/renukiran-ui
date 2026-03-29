@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { courseAPI } from '../services/api';
 
 const ACCENT_COLORS = { yellow: '#EAB308', blue: '#2B5EA7', pink: '#EC4899' };
 const ACCENT_KEYS = ['yellow', 'blue', 'pink', 'green', 'purple'];
@@ -260,9 +261,23 @@ const Courses = ({ onNavigate }) => {
       try {
         setLoading(true);
         setError(null);
-        // const response = await courseAPI.getCourses();
-        // setCourses(response.data);
-        console.log('Fetching courses...');
+        const data = await courseAPI.getCourses();
+        if (data && data.length > 0) {
+          setCourses(data.map((c, i) => ({
+            id: c.id,
+            name: c.courseName,
+            status: 'Active',
+            duration: c.duration ? `${c.duration} months` : '—',
+            maxPerBatch: 20,
+            activeBatches: 0,
+            assessments: [
+              { label: 'MCQ', weight: 30 },
+              { label: 'Practical', weight: 50 },
+              { label: 'Case Study', weight: 20 },
+            ],
+            accent: ACCENT_KEYS[i % ACCENT_KEYS.length],
+          })));
+        }
       } catch (err) {
         setError('Failed to load courses');
         console.error(err);
@@ -273,25 +288,38 @@ const Courses = ({ onNavigate }) => {
     fetchCourses();
   }, []);
 
-  const handleSaveCourse = (form) => {
-    const nextAccent = ACCENT_KEYS[courses.length % ACCENT_KEYS.length];
-    const newCourse = {
-      id: Date.now(),
-      name: form.name,
-      status: form.status,
-      duration: `${form.duration} month${parseInt(form.duration) !== 1 ? 's' : ''}`,
-      maxPerBatch: parseInt(form.maxPerBatch),
-      activeBatches: 0,
-      assessments: [
-        { label: 'MCQ', weight: parseInt(form.mcq) },
-        { label: 'Practical', weight: parseInt(form.practical) },
-        { label: 'Case Study', weight: parseInt(form.caseStudy) },
-      ],
-      accent: nextAccent,
-      ...(form.status === 'Upcoming' ? { startDate: 'TBD' } : {}),
-    };
-    setCourses((prev) => [...prev, newCourse]);
-    setShowModal(false);
+  const handleSaveCourse = async (form) => {
+    try {
+      const payload = {
+        courseName: form.name,
+        instructor: '',
+        duration: parseInt(form.duration),
+      };
+      const saved = await courseAPI.createCourse(payload);
+      const nextAccent = ACCENT_KEYS[courses.length % ACCENT_KEYS.length];
+      setCourses((prev) => [
+        ...prev,
+        {
+          id: saved.id,
+          name: saved.courseName,
+          status: form.status,
+          duration: `${form.duration} month${parseInt(form.duration) !== 1 ? 's' : ''}`,
+          maxPerBatch: parseInt(form.maxPerBatch),
+          activeBatches: 0,
+          assessments: [
+            { label: 'MCQ', weight: parseInt(form.mcq) },
+            { label: 'Practical', weight: parseInt(form.practical) },
+            { label: 'Case Study', weight: parseInt(form.caseStudy) },
+          ],
+          accent: nextAccent,
+          ...(form.status === 'Upcoming' ? { startDate: 'TBD' } : {}),
+        },
+      ]);
+      setShowModal(false);
+    } catch (err) {
+      setError('Failed to save course');
+      console.error(err);
+    }
   };
 
   const filtered = courses.filter((c) => {
