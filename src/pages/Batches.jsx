@@ -16,8 +16,8 @@ const Batches = () => {
         setError(null);
         // Placeholder for API call to fetch batches
         console.log('Fetching batches...');
-        // const response = await batchAPI.getBatches();
-        // setBatches(response.data);
+        const response = await batchAPI.getBatches();
+         setBatches(response.data);
       } catch (err) {
         setError('Failed to load batches');
         console.error(err);

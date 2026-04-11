@@ -10,11 +10,11 @@ const TRACK_LABELS = {
   OTHER: 'Other',
 };
 
-const UPCOMING_FOLLOWUPS = [
-  { name: 'Meena Kumari', type: '1-month follow-up', date: 'Mar 12, 2026', timing: 'Tomorrow', timingColor: '#374151' },
-  { name: 'Sunita Bai', type: '3-month follow-up', date: 'Mar 8, 2026', timing: 'Overdue!', timingColor: '#dc2626' },
-  { name: 'Kavita Joshi', type: '1-month follow-up', date: 'Mar 18, 2026', timing: 'In 7 days', timingColor: '#374151' },
-];
+//const UPCOMING_FOLLOWUPS = [
+//   { name: 'Meena Kumari', type: '1-month follow-up', date: 'Mar 12, 2026', timing: 'Tomorrow', timingColor: '#374151' },
+//   { name: 'Sunita Bai', type: '3-month follow-up', date: 'Mar 8, 2026', timing: 'Overdue!', timingColor: '#dc2626' },
+//   { name: 'Kavita Joshi', type: '1-month follow-up', date: 'Mar 18, 2026', timing: 'In 7 days', timingColor: '#374151' },
+// ];
 
 const getStatusBadgeStyle = (status) => {
   const styles = {
@@ -146,12 +146,12 @@ const OCDashboard = ({ currentUser, onNavigate }) => {
       </div>
 
       {/* Bottom Panel */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
         {/* Left Panel - Recent Applications */}
         <div style={{ background: 'white', borderRadius: '10px', padding: '20px 22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', margin: 0 }}>Recent Applications</h3>
-            <button onClick={() => onNavigate && onNavigate('Applications')} style={{ fontSize: '13px', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <button onClick={() => onNavigate && onNavigate('CandidateList')} style={{ fontSize: '13px', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               View All →
             </button>
           </div>
@@ -203,12 +203,12 @@ const OCDashboard = ({ currentUser, onNavigate }) => {
         </div>
 
         {/* Right Panel - Upcoming Follow-ups */}
-        <div style={{ background: 'white', borderRadius: '10px', padding: '20px 22px' }}>
+        {/* <div style={{ background: 'white', borderRadius: '10px', padding: '20px 22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', margin: 0 }}>Upcoming Follow-ups</h3>
-            <a href="#" style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'none', cursor: 'pointer' }}>
+            <button onClick={() => {}} style={{ fontSize: '13px', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               View All →
-            </a>
+            </button>
           </div>
           <div>
             {UPCOMING_FOLLOWUPS.map((followup, idx) => (
@@ -254,7 +254,7 @@ const OCDashboard = ({ currentUser, onNavigate }) => {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

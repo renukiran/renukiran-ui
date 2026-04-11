@@ -30,17 +30,45 @@ const formatDateRange = (s, e) => {
 };
 
 // ── CreateBatchModal ───────────────────────────────────────────────────────────
-const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
+export const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers, mode = 'create', batch = null }) => {
+  const isAssign = mode === 'assign';
+
+  // Resolve courseId from courseName if not directly available
+  const resolvedCourseId = batch?.courseId
+    || (courses || []).find(c => c.courseName === batch?.course)?.id
+    || '';
+
+  // Resolve trainerId from trainer name if not directly available
+  const resolvedTrainerId = batch?.trainerId
+    || (trainers || []).find(t => t.name === batch?.trainer)?.trainerId
+    || '';
+
   const [form, setForm] = useState({
-    courseId: '',
-    batchName: nextId,
-    trainerId: '',
-    location: '',
-    startDate: '',
-    endDate: '',
-    capacity: '20',
+    courseId: resolvedCourseId,
+    batchName: batch?.batchName || batch?.id || nextId,
+    trainerId: resolvedTrainerId,
+    location: batch?.location || '',
+    startDate: batch?.startDate || '',
+    endDate: batch?.endDate || '',
+    capacity: batch?.max?.toString() || batch?.capacity?.toString() || '20',
   });
   const [errors, setErrors] = useState({});
+
+  // Re-resolve trainerId once trainers list loads (async)
+  React.useEffect(() => {
+    if (isAssign && !form.trainerId && trainers.length > 0) {
+      const found = trainers.find(t => t.name === batch?.trainer);
+      if (found) setForm(prev => ({ ...prev, trainerId: found.trainerId }));
+    }
+  }, [trainers]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-resolve courseId once courses list loads (async)
+  React.useEffect(() => {
+    if (isAssign && !form.courseId && courses.length > 0) {
+      const found = courses.find(c => c.courseName === batch?.course);
+      if (found) setForm(prev => ({ ...prev, courseId: found.id }));
+    }
+  }, [courses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -53,35 +81,52 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
 
   const validate = () => {
     const e = {};
-    if (!form.courseId) e.courseId = 'Select a course';
-    if (!form.batchName.trim()) e.batchName = 'Batch name is required';
-    if (!form.trainerId) e.trainerId = 'Select a trainer';
-    if (!form.startDate) e.startDate = 'Set a start date';
-    if (!form.endDate) e.endDate = 'Set an end date';
-    else if (form.startDate && form.endDate < form.startDate) e.endDate = 'End date must be after start date';
-    const cap = Number(form.capacity);
-    if (!form.capacity || !Number.isFinite(cap) || cap < 1 || cap > 100) e.capacity = 'Capacity must be 1–100';
+    if (isAssign) {
+      if (!form.trainerId) e.trainerId = 'Select a trainer';
+    } else {
+      if (!form.courseId) e.courseId = 'Select a course';
+      if (!form.batchName.trim()) e.batchName = 'Batch name is required';
+      if (!form.trainerId) e.trainerId = 'Select a trainer';
+      if (!form.startDate) e.startDate = 'Set a start date';
+      if (!form.endDate) e.endDate = 'Set an end date';
+      else if (form.startDate && form.endDate < form.startDate) e.endDate = 'End date must be after start date';
+      const cap = Number(form.capacity);
+      if (!form.capacity || !Number.isFinite(cap) || cap < 1 || cap > 100) e.capacity = 'Capacity must be 1–100';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSubmit = () => {
     if (!validate()) return;
-    onSave({
-      batchName: form.batchName.trim(),
-      courseId: Number(form.courseId),
-      trainerId: Number(form.trainerId),
-      startDate: form.startDate,
-      endDate: form.endDate,
-      capacity: parseInt(form.capacity),
-    });
+    if (isAssign) {
+      onSave({
+        batchId: batch?.rawId,
+        batchName: form.batchName,
+        courseId: Number(form.courseId),
+        trainerId: Number(form.trainerId),
+        startDate: form.startDate,
+        endDate: form.endDate,
+        capacity: parseInt(form.capacity),
+      });
+    } else {
+      onSave({
+        batchName: form.batchName.trim(),
+        courseId: Number(form.courseId),
+        trainerId: Number(form.trainerId),
+        startDate: form.startDate,
+        endDate: form.endDate,
+        capacity: parseInt(form.capacity),
+      });
+    }
     onClose();
   };
 
-  const isValid =
-    form.courseId && form.batchName.trim() && form.trainerId &&
-    form.startDate && form.endDate && form.endDate >= form.startDate &&
-    Number(form.capacity) >= 1 && Number(form.capacity) <= 100;
+  const isValid = isAssign
+    ? !!form.trainerId
+    : form.courseId && form.batchName.trim() && form.trainerId &&
+      form.startDate && form.endDate && form.endDate >= form.startDate &&
+      Number(form.capacity) >= 1 && Number(form.capacity) <= 100;
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -90,11 +135,11 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xl">
-              🗂
+              {isAssign ? '👤' : '🗂'}
             </div>
             <div>
-              <div className="text-lg font-bold text-gray-900">Create Batch</div>
-              <div className="text-xs text-gray-500 mt-0.5">Assign course, trainer, dates and capacity for a new cohort.</div>
+              <div className="text-lg font-bold text-gray-900">{isAssign ? 'Assign Trainer' : 'Create Batch'}</div>
+              <div className="text-xs text-gray-500 mt-0.5">{isAssign ? 'Assign a trainer to this batch.' : 'Assign course, trainer, dates and capacity for a new cohort.'}</div>
             </div>
           </div>
           <button
@@ -132,8 +177,9 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
               <select
                 value={form.courseId}
                 onChange={(e) => set('courseId', e.target.value)}
+                disabled={isAssign}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 appearance-none ${
-                  errors.courseId ? 'border-red-400' : 'border-gray-200'
+                  isAssign ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : errors.courseId ? 'border-red-400' : 'border-gray-200'
                 }`}
               >
                 <option value="">Select course...</option>
@@ -149,8 +195,9 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
                 type="text"
                 value={form.batchName}
                 onChange={(e) => set('batchName', e.target.value)}
+                disabled={isAssign}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
-                  errors.batchName ? 'border-red-400' : 'border-gray-200'
+                  isAssign ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : errors.batchName ? 'border-red-400' : 'border-gray-200'
                 }`}
               />
               {errors.batchName ? (
@@ -186,7 +233,10 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
                 value={form.location}
                 onChange={(e) => set('location', e.target.value)}
                 placeholder="e.g., Garhi Centre - Room 2"
-                className="w-full h-10 px-3 text-sm border border-gray-200 rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                disabled={isAssign}
+                className={`w-full h-10 px-3 text-sm border border-gray-200 rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
+                  isAssign ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                }`}
               />
             </div>
           </div>
@@ -201,8 +251,9 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
                 type="date"
                 value={form.startDate}
                 onChange={(e) => set('startDate', e.target.value)}
+                disabled={isAssign}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
-                  errors.startDate ? 'border-red-400' : 'border-gray-200'
+                  isAssign ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : errors.startDate ? 'border-red-400' : 'border-gray-200'
                 }`}
               />
               {errors.startDate && <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>}
@@ -215,8 +266,9 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
                 type="date"
                 value={form.endDate}
                 onChange={(e) => set('endDate', e.target.value)}
+                disabled={isAssign}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
-                  errors.endDate ? 'border-red-400' : 'border-gray-200'
+                  isAssign ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : errors.endDate ? 'border-red-400' : 'border-gray-200'
                 }`}
               />
               {errors.endDate && <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>}
@@ -235,8 +287,9 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
                 onChange={(e) => set('capacity', e.target.value)}
                 min="1"
                 max="100"
+                disabled={isAssign}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
-                  errors.capacity ? 'border-red-400' : 'border-gray-200'
+                  isAssign ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : errors.capacity ? 'border-red-400' : 'border-gray-200'
                 }`}
               />
               {errors.capacity && <p className="text-xs text-red-500 mt-1">{errors.capacity}</p>}
@@ -251,7 +304,10 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
               onChange={(e) => set('notes', e.target.value)}
               placeholder="Optional logistics notes for classroom setup, equipment, or scheduling."
               rows={3}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 resize-none"
+              disabled={isAssign}
+              className={`w-full px-3 py-2.5 text-sm border border-gray-200 rounded-md outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 resize-none ${
+                isAssign ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+              }`}
             />
           </div>
         </div>
@@ -259,7 +315,7 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
           <p className="text-xs text-gray-400">
-            {isValid ? 'Ready to create batch.' : 'Complete all required fields to continue.'}
+            {isValid ? (isAssign ? 'Ready to save trainer.' : 'Ready to create batch.') : (isAssign ? 'Select a trainer to continue.' : 'Complete all required fields to continue.')}
           </p>
           <div className="flex gap-3">
             <button
@@ -277,7 +333,7 @@ const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers }) => {
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
-              Create Batch
+              {isAssign ? 'Save Trainer' : 'Create Batch'}
             </button>
           </div>
         </div>
@@ -311,6 +367,8 @@ const BatchManagement = ({ onNavigate }) => {
           course: b.courseName || '',
           trainer: b.trainerName || '',
           dates: formatDateRange(b.startDate, b.endDate),
+          startDate: b.startDate || '',
+          endDate: b.endDate || '',
           enrolled: 0,
           max: b.capacity || 0,
           status: b.status || computeBatchStatus(b.startDate, b.endDate),

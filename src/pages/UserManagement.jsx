@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { userAPI } from '../services/api';
 
 const ROLE_CONFIG = {
-  Admin: { className: 'bg-blue-100 text-blue-700' },
-  Trainer: { className: 'bg-teal-100 text-teal-700' },
-  'Office Coord.': { className: 'bg-purple-100 text-purple-700' },
+  ADMIN: { className: 'bg-blue-100 text-blue-700', label: 'Admin' },
+  TRAINER: { className: 'bg-teal-100 text-teal-700', label: 'Trainer' },
+  COORDINATOR: { className: 'bg-purple-100 text-purple-700', label: 'Coordinator' },
 };
 
 const AVATAR_COLORS = ['bg-blue-700', 'bg-teal-600', 'bg-purple-600', 'bg-amber-600', 'bg-indigo-600'];
@@ -119,7 +119,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
 
 // ── UserFormModal ─────────────────────────────────────────────────────────────
 const UserFormModal = ({ role, onClose, onSave }) => {
-  const isOC = role === 'Office Coord.';
+  const isOC = role === 'COORDINATOR';
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: genPassword() });
   const [showPwd, setShowPwd] = useState(false);
   const [selectedCourses, setSelectedCourses] = useState([]);
@@ -360,11 +360,11 @@ const UserFormModal = ({ role, onClose, onSave }) => {
 
 const UserManagement = () => {
   const [users, setUsers] = useState([
-    { id: 1, initials: 'VA', name: 'Vinay Adalath', email: 'vinay@rwf.org', role: 'Admin', active: true },
-    { id: 2, initials: 'SK', name: 'Suman Kumar', email: 'suman@rwf.org', role: 'Trainer', active: true },
-    { id: 3, initials: 'RP', name: 'Rekha Patel', email: 'rekha@rwf.org', role: 'Office Coord.', active: true },
-    { id: 4, initials: 'AM', name: 'Asha Mehra', email: 'asha@rwf.org', role: 'Trainer', active: true },
-    { id: 5, initials: 'PK', name: 'Pradeep K.', email: 'pradeep@rwf.org', role: 'Office Coord.', active: false },
+    { id: 1, initials: 'VA', name: 'Vinay Adalath', email: 'vinay@rwf.org', role: 'ADMIN', active: true },
+    { id: 2, initials: 'SK', name: 'Suman Kumar', email: 'suman@rwf.org', role: 'TRAINER', active: true },
+    { id: 3, initials: 'RP', name: 'Rekha Patel', email: 'rekha@rwf.org', role: 'COORDINATOR', active: true },
+    { id: 4, initials: 'AM', name: 'Asha Mehra', email: 'asha@rwf.org', role: 'TRAINER', active: true },
+    { id: 5, initials: 'PK', name: 'Pradeep K.', email: 'pradeep@rwf.org', role: 'COORDINATOR', active: false },
   ]);
 
   const [showOCModal, setShowOCModal] = useState(false);
@@ -392,7 +392,7 @@ const UserManagement = () => {
               ? `${u.firstName} ${u.lastName}`
               : u.firstName || u.lastName || '').trim() || u.username,
             email: u.email,
-            role: u.userType ?? 'Trainer',
+            role: u.userType ?? 'TRAINER',
             active: u.active ?? true,
           })));
         }
@@ -436,7 +436,7 @@ const UserManagement = () => {
         firstName,
         lastName,
         skills: null,
-        userType: user.role === 'Office Coord.' ? 'OC' : 'TRAINER',
+        userType: user.role === 'COORDINATOR' ? 'COORDINATOR' : 'TRAINER',
       };
       const saved = await userAPI.createUser(payload);
       const words = user.name.trim().split(/\s+/);
@@ -481,7 +481,7 @@ const UserManagement = () => {
         firstName,
         lastName,
         skills: null,
-        userType: target?.role === 'Office Coord.' ? 'OC' : 'TRAINER',
+        userType: target?.role === 'COORDINATOR' ? 'COORDINATOR' : 'TRAINER',
       };
       await userAPI.updateUser(id, payload);
       const words = changes.name.trim().split(/\s+/);
@@ -547,7 +547,7 @@ const UserManagement = () => {
           onChange={(e) => setRoleFilter(e.target.value)}
           className="h-10 px-3 pr-8 text-sm bg-white border border-gray-200 rounded-md outline-none focus:border-blue-600 appearance-none cursor-pointer"
         >
-          {['Role: All', 'Admin', 'Trainer', 'Office Coord.'].map((r) => <option key={r}>{r}</option>)}
+          {['Role: All', 'ADMIN', 'TRAINER', 'COORDINATOR'].map((r) => <option key={r}>{r}</option>)}
         </select>
         <select
           value={statusFilter}
@@ -594,7 +594,7 @@ const UserManagement = () => {
                     <td className="px-4 py-3.5 text-sm text-gray-600">{u.email}</td>
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${ROLE_CONFIG[u.role]?.className || 'bg-gray-100 text-gray-600'}`}>
-                        {u.role}
+                        {ROLE_CONFIG[u.role]?.label || u.role}
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
@@ -633,10 +633,10 @@ const UserManagement = () => {
         </div>
       )}
       {showOCModal && (
-        <UserFormModal role="Office Coord." onClose={() => setShowOCModal(false)} onSave={handleAddUser} />
+        <UserFormModal role="COORDINATOR" onClose={() => setShowOCModal(false)} onSave={handleAddUser} />
       )}
       {showTrainerModal && (
-        <UserFormModal role="Trainer" onClose={() => setShowTrainerModal(false)} onSave={handleAddUser} />
+        <UserFormModal role="TRAINER" onClose={() => setShowTrainerModal(false)} onSave={handleAddUser} />
       )}
       {editUser && (
         <EditUserModal user={editUser} onClose={() => setEditUser(null)} onSave={handleEditUser} />

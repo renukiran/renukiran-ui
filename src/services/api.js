@@ -1,6 +1,6 @@
 // API Service with JWT token handling
-// Base URL: empty string uses CRA dev proxy (setupProxy.js); set REACT_APP_API_URL for direct backend access
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+// Always use relative paths - setupProxy.js handles routing
+const API_BASE_URL = '';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('jwtToken');
@@ -126,5 +126,10 @@ export const applicationAPI = {
   getApplications: () => apiCall('/applicationForm', 'GET'),
   getApplicationById: (id) => apiCall(`/applicationForm/${id}`, 'GET'),
   updateApplication: (id, formData) => apiCall(`/applicationForm/${id}`, 'PUT', formData),
+};
+
+// Admissions endpoints — backend: /api/v1/admissions
+export const admissionsAPI = {
+  assignToBatch: (candidateId, batchId) => apiCall('/api/v1/admissions', 'POST', { candidateId, batchId }),
 };
 

@@ -1,13 +1,12 @@
 import React from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
-import { Controller, useFormContext } from 'react-hook-form';
+import { useFormContext } from 'react-hook-form';
 
 const Err = ({ msg }) => msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
 const inputCls = (hasErr) =>
   `w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${hasErr ? 'border-red-500' : 'border-gray-300'}`;
 
 const Step2Household = ({ register, errors, onNext, onBack, onSaveDraft, loading }) => {
-  const { control } = useFormContext() || {};
   
   const governmentSchemeOptions = [
     'Ration Card', 'Widow Pension', 'Old Age Pension', 'Jan Dhan Account', 'Ujjwala', 'Other',

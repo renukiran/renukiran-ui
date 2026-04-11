@@ -1,15 +1,29 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { applicationAPI, batchAPI, admissionsAPI } from '../services/api';
 
-const CANDIDATES = [
-  { initials: 'PS', name: 'Priya Sharma', phone: '9876543210', course: 'Stitching', status: 'New', date: 'Mar 10, 2026', avatarColor: '#7c3aed' },
-  { initials: 'KR', name: 'Kavita Rani', phone: '9876543211', course: 'Computers', status: 'Under Review', date: 'Mar 9, 2026', avatarColor: '#db2777' },
-  { initials: 'SM', name: 'Sunita Mehra', phone: '9876543212', course: 'Beauty', status: 'Assigned', date: 'Mar 8, 2026', avatarColor: '#16a34a' },
-  { initials: 'AK', name: 'Anita Kumari', phone: '9876543213', course: 'Stitching', status: 'Training', date: 'Mar 7, 2026', avatarColor: '#0891b2' },
-  { initials: 'RP', name: 'Radha Patel', phone: '9876543214', course: 'Handicraft', status: 'Placed', date: 'Mar 5, 2026', avatarColor: '#ea580c' },
-  { initials: 'MD', name: 'Meena Devi', phone: '9876543215', course: 'Computers', status: 'Draft', date: 'Mar 10, 2026', avatarColor: '#d97706' },
-  { initials: 'LK', name: 'Lakshmi K.', phone: '9876543216', course: 'Food Enterprise', status: 'Selected', date: 'Mar 6, 2026', avatarColor: '#0284c7' },
-  { initials: 'NB', name: 'Neha Banerjee', phone: '9876543217', course: 'Bag Making', status: 'Not Placed', date: 'Mar 3, 2026', avatarColor: '#9333ea' },
-];
+const AVATAR_COLORS = ['#7c3aed', '#db2777', '#16a34a', '#0891b2', '#ea580c', '#d97706', '#0284c7', '#9333ea', '#be185d', '#0f766e'];
+
+const TRACK_LABELS = {
+  TAILORING: 'Tailoring',
+  BEAUTY_AND_GROOMING: 'Beauty & Grooming',
+  FOOD_BUSINESS: 'Food Business',
+  HANDICRAFT: 'Handicraft',
+  HOME_BASED_PRODUCTION: 'Home-Based Prod.',
+  OTHER: 'Other',
+};
+
+const getInitials = (name) => {
+  if (!name) return 'NA';
+  return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+};
+
+const getAvatarColor = (index) => AVATAR_COLORS[index % AVATAR_COLORS.length];
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '—';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 const STATUS_BADGE_STYLES = {
   New: { background: '#dbeafe', color: '#1d4ed8' },
@@ -26,21 +40,66 @@ const STATUS_OPTIONS = ['All Status', 'New', 'Under Review', 'Assigned', 'Traini
 const COURSE_OPTIONS = ['All Courses', 'Stitching', 'Computers', 'Beauty', 'Handicraft', 'Food Enterprise', 'Bag Making'];
 
 const CandidateList = ({ onNavigate }) => {
+  const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [selectedCourse, setSelectedCourse] = useState('All Courses');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [batches, setBatches] = useState([]);
+  const [assignCandidateId, setAssignCandidateId] = useState('');
+  const [assignBatchId, setAssignBatchId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [assignStatus, setAssignStatus] = useState(null);
   const itemsPerPage = 8;
+
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await applicationAPI.getApplications();
+        const list = Array.isArray(res) ? res : res?.data ?? [];
+        const mapped = list.map((a, idx) => ({
+          id: a.id,
+          initials: getInitials(a.fullName),
+          name: a.fullName ?? '—',
+          phone: a.mobileNumber ?? '—',
+          course: TRACK_LABELS[a.preferredExperienceTrack] ?? a.preferredExperienceTrack ?? '—',
+          status: a.applicationStatus ?? 'New',
+          date: formatDate(a.createdDate),
+          avatarColor: getAvatarColor(idx),
+          raw: a,
+        }));
+        setCandidates(mapped);
+      } catch (err) {
+        setError('Failed to load candidates.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCandidates();
+
+    batchAPI.getBatches()
+      .then(data => {
+        const list = Array.isArray(data) ? data : data?.content ?? [];
+        setBatches(list);
+      })
+      .catch(err => console.error('Failed to load batches', err));
+  }, []);
 
   // Filter candidates
   const filteredCandidates = useMemo(() => {
-    return CANDIDATES.filter((candidate) => {
+    return candidates.filter((candidate) => {
       const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) || candidate.phone.includes(searchTerm);
       const matchesStatus = selectedStatus === 'All Status' || candidate.status === selectedStatus;
       const matchesCourse = selectedCourse === 'All Courses' || candidate.course === selectedCourse;
       return matchesSearch && matchesStatus && matchesCourse;
     });
-  }, [searchTerm, selectedStatus, selectedCourse]);
+  }, [candidates, searchTerm, selectedStatus, selectedCourse]);
 
   // Pagination
   const totalPages = Math.ceil(filteredCandidates.length / itemsPerPage);
@@ -78,26 +137,34 @@ const CandidateList = ({ onNavigate }) => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#111827', margin: 0 }}>Candidates</h1>
-        <button
-          onClick={() => onNavigate('Applications')}
-          style={{
-            background: '#2563eb',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '10px 20px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'background 0.3s ease',
-          }}
-          onMouseEnter={(e) => (e.target.style.background = '#1d4ed8')}
-          onMouseLeave={(e) => (e.target.style.background = '#2563eb')}
-        >
-          + New Application
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => { setAssignCandidateId(''); setAssignBatchId(''); setAssignStatus(null); setShowAssignModal(true); }}
+            style={{ background: '#fff', color: '#2563eb', border: '1px solid #2563eb', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Assign to Batch
+          </button>
+          <button
+            onClick={() => onNavigate('Applications')}
+            style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+            onMouseEnter={(e) => (e.target.style.background = '#1d4ed8')}
+            onMouseLeave={(e) => (e.target.style.background = '#2563eb')}
+          >
+            + New Application
+          </button>
+        </div>
       </div>
 
+      {error && (
+        <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' }}>
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: '#6b7280', fontSize: '14px' }}>Loading candidates...</div>
+      ) : (
+        <>
       {/* Filters Bar */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
         {/* Search Input */}
@@ -212,7 +279,7 @@ const CandidateList = ({ onNavigate }) => {
               return (
                 <tr
                   key={idx}
-                  onClick={() => onNavigate('CandidateProfile', candidate)}
+                  onClick={() => onNavigate('CandidateProfile', candidate.raw)}
                   style={{
                     borderBottom: '1px solid #f3f4f6',
                     cursor: 'pointer',
@@ -331,6 +398,88 @@ const CandidateList = ({ onNavigate }) => {
           </button>
         </div>
       </div>
+      </>
+      )}
+
+      {/* Assign to Batch Modal */}
+      {showAssignModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #e5e7eb' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0 }}>Assign to Batch</h2>
+              <button onClick={() => setShowAssignModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', color: '#9ca3af', cursor: 'pointer' }}>×</button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>Candidate <span style={{ color: '#dc2626' }}>*</span></label>
+                <select
+                  value={assignCandidateId}
+                  onChange={(e) => setAssignCandidateId(e.target.value)}
+                  style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="">Select candidate...</option>
+                  {candidates.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>Batch <span style={{ color: '#dc2626' }}>*</span></label>
+                <select
+                  value={assignBatchId}
+                  onChange={(e) => setAssignBatchId(e.target.value)}
+                  style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="">Select batch...</option>
+                  {batches.map(b => (
+                    <option key={b.id ?? b.rawId} value={b.id ?? b.rawId}>{b.batchName ?? b.id}</option>
+                  ))}
+                </select>
+              </div>
+              {assignStatus && (
+                <p style={{ fontSize: '13px', fontWeight: 600, color: assignStatus.type === 'success' ? '#16a34a' : '#dc2626', margin: 0 }}>
+                  {assignStatus.type === 'success' ? '✓ ' : '✗ '}{assignStatus.message}
+                </p>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '16px 24px', borderTop: '1px solid #f3f4f6' }}>
+              <button
+                onClick={() => setShowAssignModal(false)}
+                style={{ height: '38px', padding: '0 20px', fontSize: '14px', color: '#374151', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!assignCandidateId || !assignBatchId) {
+                    setAssignStatus({ type: 'error', message: 'Please select both candidate and batch.' });
+                    return;
+                  }
+                  setAssigning(true);
+                  setAssignStatus(null);
+                  try {
+                    await admissionsAPI.assignToBatch(Number(assignCandidateId), Number(assignBatchId));
+                    setAssignStatus({ type: 'success', message: 'Candidate assigned to batch successfully!' });
+                  } catch (err) {
+                    setAssignStatus({ type: 'error', message: err?.message || 'Failed to assign candidate.' });
+                  } finally {
+                    setAssigning(false);
+                  }
+                }}
+                disabled={assigning}
+                style={{ height: '38px', padding: '0 20px', fontSize: '14px', fontWeight: 600, color: '#fff', background: assigning ? '#93c5fd' : '#2563eb', border: 'none', borderRadius: '6px', cursor: assigning ? 'not-allowed' : 'pointer' }}
+              >
+                {assigning ? 'Assigning...' : 'Assign'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

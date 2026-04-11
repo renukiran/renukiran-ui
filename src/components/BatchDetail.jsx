@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-
-const CANDIDATES_DATA = [
-  { id: 1, name: 'Priya S.', phone: '9876543210', status: 'Training', attendance: 93, streak: '12 days', absentNote: null, alert: null, mcq: 85, practical: 90, caseStudy: 78, remarks: '' },
-  { id: 2, name: 'Kavita R.', phone: '9876543211', status: 'Training', attendance: 68, streak: '0', absentNote: '(absent 2)', alert: 'Below 70%', mcq: 60, practical: 45, caseStudy: 50, remarks: '' },
-  { id: 3, name: 'Sunita M.', phone: '9876543212', status: 'Training', attendance: 85, streak: '8 days', absentNote: null, alert: null, mcq: 70, practical: 80, caseStudy: 65, remarks: '' },
-  { id: 4, name: 'Anita K.', phone: '9876543213', status: 'Training', attendance: 72, streak: '1 day', absentNote: null, alert: 'At risk', mcq: 40, practical: 35, caseStudy: 30, remarks: 'Needs more practice with machine operation.' },
-  { id: 5, name: 'Radha P.', phone: '9876543214', status: 'Training', attendance: 90, streak: '5 days', absentNote: null, alert: null, mcq: 75, practical: 85, caseStudy: 70, remarks: '' },
-  { id: 6, name: 'Meena D.', phone: '9876543215', status: 'Training', attendance: 78, streak: '3 days', absentNote: null, alert: null, mcq: 0, practical: 0, caseStudy: 0, remarks: '' },
-];
+import { batchAPI, trainerAPI, courseAPI, applicationAPI } from '../services/api';
+import { CreateBatchModal } from '../pages/BatchManagement';
 
 const getAttendanceColor = (attendance) => {
   if (attendance >= 85) return '#16a34a';
@@ -22,14 +15,52 @@ const calculateFinal = (mcq, practical, caseStudy) => {
   return (m * 0.3 + p * 0.5 + c * 0.2).toFixed(1);
 };
 
-const BatchDetail = () => {
+const BatchDetail = ({ batchData, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('Candidates');
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 11));
   const [attendance, setAttendance] = useState({});
-  const [candidates, setCandidates] = useState(CANDIDATES_DATA);
+  const [candidates, setCandidates] = useState([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(true);
   const [expandedRemarks, setExpandedRemarks] = useState(null);
   const [saveMessage, setSaveMessage] = useState('');
   const [publishMessage, setPublishMessage] = useState('');
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [trainers, setTrainers] = useState([]);
+  const [courses, setCourses] = useState([]);
+
+  React.useEffect(() => {
+    Promise.all([trainerAPI.getTrainers(), courseAPI.getCourses()])
+      .then(([td, cd]) => {
+        setTrainers(Array.isArray(td) ? td : []);
+        setCourses(Array.isArray(cd) ? cd : []);
+      })
+      .catch(err => console.error('Failed to load trainers/courses', err));
+
+    applicationAPI.getApplications()
+      .then(data => {
+        const list = Array.isArray(data) ? data
+          : Array.isArray(data?.content) ? data.content
+          : Array.isArray(data?.data) ? data.data
+          : [];
+        setCandidates(list.map(c => ({
+          id: c.id,
+          name: c.fullName ?? '—',
+          phone: c.mobileNumber ?? '—',
+          status: c.applicationStatus ?? '—',
+          attendance: c.attendancePercentage ?? 0,
+          streak: c.streak ?? '—',
+          absentNote: c.absentNote ?? null,
+          alert: c.alert ?? null,
+          mcq: c.mcq ?? 0,
+          practical: c.practical ?? 0,
+          caseStudy: c.caseStudy ?? 0,
+          remarks: c.remarks ?? '',
+          raw: c,
+        })));
+      })
+      .catch(err => console.error('Failed to load candidates', err))
+      .finally(() => setCandidatesLoading(false));
+  }, []);
 
   const formatDate = (date) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -108,32 +139,49 @@ const BatchDetail = () => {
   return (
     <div style={{ background: '#ffffff', padding: '28px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       {/* Header & Tabs */}
-      <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#111827', marginBottom: '20px' }}>
-        Stitching Basic – Batch 1
-      </h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#111827' }}>
+          {batchData?.batchName ?? batchData?.id ?? 'Stitching Basic – Batch 1'}
+        </h1>
+        <button
+          onClick={() => setShowAssignModal(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 18px', background: '#fff', border: '1px solid #2563eb', color: '#2563eb', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+        >
+          👤 Assign Trainer
+        </button>
+      </div>
       <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
-        {['Candidates', 'Attendance', 'Assessments'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '12px 16px',
-              fontSize: '14px',
-              cursor: 'pointer',
-              border: 'none',
-              background: 'none',
-              color: activeTab === tab ? '#2563eb' : '#6b7280',
-              borderBottom: activeTab === tab ? '2px solid #2563eb' : 'none',
-              fontWeight: activeTab === tab ? 600 : 400,
-            }}
-          >
-            {tab}
-          </button>
-        ))}
+        {['Candidates', 'Attendance', 'Assessments'].map(tab => {
+          const isDisabled = tab === 'Assessments';
+          return (
+            <button
+              key={tab}
+              onClick={() => !isDisabled && setActiveTab(tab)}
+              disabled={isDisabled}
+              style={{
+                padding: '12px 16px',
+                fontSize: '14px',
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                border: 'none',
+                background: 'none',
+                color: isDisabled ? '#d1d5db' : activeTab === tab ? '#2563eb' : '#6b7280',
+                borderBottom: activeTab === tab && !isDisabled ? '2px solid #2563eb' : 'none',
+                fontWeight: activeTab === tab && !isDisabled ? 600 : 400,
+              }}
+            >
+              {tab}
+            </button>
+          );
+        })}
       </div>
 
       {/* TAB 1: CANDIDATES */}
       {activeTab === 'Candidates' && (
+        candidatesLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280', fontSize: '14px' }}>Loading candidates...</div>
+        ) : candidates.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: '14px' }}>No candidates found.</div>
+        ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
@@ -172,15 +220,8 @@ const BatchDetail = () => {
                 </td>
                 <td style={{ padding: '14px 16px' }}>
                   <button
-                    onClick={() => alert(`View profile for ${candidate.name}`)}
-                    style={{
-                      color: '#2563eb',
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                    }}
+                    onClick={() => onNavigate && onNavigate('CandidateProfile', candidate.raw)}
+                    style={{ color: '#2563eb', fontSize: '13px', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
                   >
                     View Profile
                   </button>
@@ -189,6 +230,7 @@ const BatchDetail = () => {
             ))}
           </tbody>
         </table>
+        )
       )}
 
       {/* TAB 2: ATTENDANCE */}
@@ -648,6 +690,36 @@ const BatchDetail = () => {
             </div>
           )}
         </>
+      )}
+      {showAssignModal && (
+        <CreateBatchModal
+          mode="assign"
+          onClose={() => setShowAssignModal(false)}
+          onSave={async (data) => {
+            try {
+              await batchAPI.updateBatch(batchData?.rawId ?? batchData?.id, {
+                batchName: data.batchName,
+                courseId: data.courseId,
+                trainerId: data.trainerId,
+                startDate: data.startDate,
+                endDate: data.endDate,
+                capacity: data.capacity,
+              });
+              const assignedTrainer = trainers.find(t => t.trainerId === data.trainerId);
+              if (assignedTrainer && batchData) {
+                batchData.trainerId = data.trainerId;
+                batchData.trainer = assignedTrainer.name;
+              }
+              setShowAssignModal(false);
+            } catch (err) {
+              console.error('Failed to assign trainer', err);
+            }
+          }}
+          nextId={batchData?.id ?? ''}
+          courses={courses}
+          trainers={trainers}
+          batch={batchData}
+        />
       )}
     </div>
   );

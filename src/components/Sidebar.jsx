@@ -11,9 +11,9 @@ const ADMIN_NAV = [
 
 const OC_NAV = [
   { name: 'Dashboard', label: 'Dashboard', icon: Home },
-  { name: 'CandidateList', label: 'Applications', icon: FileText },
+  { name: 'CandidateList', label: 'Candidates', icon: FileText },
   { name: 'BatchManagement', label: 'Batches', icon: Users },
-  { name: 'Placements', label: 'Placements', icon: Bookmark },
+  { name: 'Placements', label: 'Placements', icon: Bookmark, disabled: true },
   { name: 'Notifications', label: 'Notifications', icon: Bell },
 ];
 
@@ -24,11 +24,11 @@ const TRAINER_NAV = [
 ];
 
 const Sidebar = ({ activePage, onNavigate, currentUser, notificationCount = 0 }) => {
-  const role = (currentUser?.role || '').toUpperCase();
-  const isAdmin = role === 'ADMIN';
-  const isTrainer = role === 'TRAINER';
+  const role = (currentUser?.role || '').toLowerCase();
+  const isAdmin = role === 'admin';
+  const isTrainer = role === 'trainer';
   const navLinks = isAdmin ? ADMIN_NAV : isTrainer ? TRAINER_NAV : OC_NAV;
-  const roleLabel = isAdmin ? 'Admin' : isTrainer ? 'Trainer' : 'Office Coordinator';
+  const roleLabel = isAdmin ? 'Admin' : isTrainer ? 'Trainer' : 'Coordinator';
   const initials = currentUser?.name
     ? currentUser.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     : 'U';
@@ -52,19 +52,22 @@ const Sidebar = ({ activePage, onNavigate, currentUser, notificationCount = 0 })
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-2">
-        {navLinks.map(({ name, label, icon: Icon }) => (
+        {navLinks.map(({ name, label, icon: Icon, disabled }) => (
           <button
             key={name}
-            onClick={() => onNavigate(name)}
+            onClick={() => !disabled && onNavigate(name)}
+            disabled={disabled}
             className={`flex items-center w-full px-4 py-2.5 text-sm rounded-sm transition-all ${
-              activePage === name
+              disabled
+                ? 'text-gray-300 cursor-not-allowed'
+                : activePage === name
                 ? 'border-l-4 border-blue-600 bg-blue-50 text-blue-700 font-semibold'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <Icon
               size={18}
-              className={`mr-3 ${activePage === name ? 'text-blue-600' : 'text-gray-400'}`}
+              className={`mr-3 ${disabled ? 'text-gray-300' : activePage === name ? 'text-blue-600' : 'text-gray-400'}`}
             />
             <span className="flex-1 text-left">{label}</span>
             {name === 'Notifications' && notificationCount > 0 && (

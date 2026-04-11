@@ -16,7 +16,7 @@ const Step1PersonalInfo = ({ register, errors, onNext, onBack, onSaveDraft, load
       </div>
 
       {/* Batch */}
-      <div>
+      {/*<div>
         <label className="block text-sm font-semibold text-gray-700 mb-3">
           Batch <span className="text-red-500">*</span>
         </label>
@@ -34,7 +34,7 @@ const Step1PersonalInfo = ({ register, errors, onNext, onBack, onSaveDraft, load
           ))}
         </div>
         <Err msg={errors.batch?.message} />
-      </div>
+      </div>*/}
 
       {/* Full Name & Age */}
       <div className="grid grid-cols-2 gap-4">

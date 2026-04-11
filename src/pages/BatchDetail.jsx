@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { applicationAPI } from '../services/api';
 
 const AVATAR_COLORS = ['bg-blue-700', 'bg-purple-600', 'bg-green-600', 'bg-amber-600', 'bg-teal-600'];
 
@@ -13,6 +14,11 @@ const AttendanceLabel = ({ pct }) => {
   if (pct < 70) return <span className="ml-1.5 text-xs font-medium px-1.5 py-0.5 rounded bg-red-100 text-red-700">Below threshold</span>;
   if (pct < 80) return <span className="ml-1.5 text-xs font-medium px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">At risk</span>;
   return null;
+};
+
+const getInitials = (name) => {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 };
 
 const BatchDetail = ({ batch, onNavigate }) => {
@@ -29,35 +35,33 @@ const BatchDetail = ({ batch, onNavigate }) => {
 
   const [activeTab, setActiveTab] = useState('Candidates');
   const [selectedCandidates, setSelectedCandidates] = useState([]);
-  // eslint-disable-next-line no-unused-vars
-  const [candidates, setCandidates] = useState([
-    { id: 1, initials: 'MK', name: 'Meena Kumari', phone: '+91 98765 43210', status: 'Active', attendance: 93 },
-    { id: 2, initials: 'RS', name: 'Radha Sharma', phone: '+91 98765 43211', status: 'Active', attendance: 68 },
-    { id: 3, initials: 'SB', name: 'Sunita Bai', phone: '+91 98765 43212', status: 'Active', attendance: 85 },
-    { id: 4, initials: 'PD', name: 'Parveen Devi', phone: '+91 98765 43213', status: 'Active', attendance: 72 },
-    { id: 5, initials: 'KJ', name: 'Kavita Joshi', phone: '+91 98765 43214', status: 'Active', attendance: 90 },
-  ]);
+  const [candidates, setCandidates] = useState([]);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchBatchDetail = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        // const response = await batchAPI.getBatchById(batchData.id);
-        // setCandidates(response.data.candidates);
-        console.log('Fetching batch detail for:', batchData.id);
-      } catch (err) {
-        setError('Failed to load batch detail');
+    applicationAPI.getApplications()
+      .then(data => {
+        const list = Array.isArray(data) ? data
+          : Array.isArray(data?.content) ? data.content
+          : Array.isArray(data?.data) ? data.data
+          : [];
+        setCandidates(list.map(c => ({
+          id: c.id,
+          initials: getInitials(c.fullName),
+          name: c.fullName ?? '—',
+          phone: c.mobileNumber ?? '—',
+          status: c.applicationStatus ?? '—',
+          attendance: c.attendancePercentage ?? 0,
+        })));
+      })
+      .catch(err => {
+        setError('Failed to load candidates');
         console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBatchDetail();
-  }, [batchData.id]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const toggleCandidate = (id) => {
     setSelectedCandidates((prev) =>
@@ -173,7 +177,7 @@ const BatchDetail = ({ batch, onNavigate }) => {
                       />
                     </th>
                     <th className="px-4 py-3 w-10 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200">#</th>
-                    {['Name', 'Phone', 'Status', 'Attendance %'].map((h) => (
+                    {['Name', 'Phone', 'Status', 'Attendance %', 'Action'].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200">{h}</th>
                     ))}
                   </tr>
@@ -205,6 +209,14 @@ const BatchDetail = ({ batch, onNavigate }) => {
                       <td className="px-4 py-3.5 text-sm">
                         <span className={attendanceClass(c.attendance)}>{c.attendance}%</span>
                         <AttendanceLabel pct={c.attendance} />
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <button
+                          onClick={() => onNavigate && onNavigate('CandidateProfile', c.raw)}
+                          className="text-sm font-medium text-blue-700 hover:text-blue-900"
+                        >
+                          View Profile
+                        </button>
                       </td>
                     </tr>
                   ))}

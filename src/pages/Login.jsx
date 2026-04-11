@@ -21,7 +21,14 @@ const Login = ({ onLoginSuccess }) => {
       const response = await authAPI.login({ userName: email, password });
       if (response && response.success) {
         if (rememberMe) localStorage.setItem('rememberMe', 'true');
-        onLoginSuccess({ email, role: response.userType || 'ADMIN', name: response.userName || email });
+        if (response.token) localStorage.setItem('jwtToken', response.token);
+        const roleMap = {
+          ADMIN: 'admin',
+          TRAINER: 'trainer',
+          COORDINATOR: 'oc',
+        };
+        const role = roleMap[response.userType?.toUpperCase()] || 'oc';
+        onLoginSuccess({ email, role, name: response.userName || email });
       } else {
         setError(response?.message || 'Invalid credentials. Please try again.');
       }

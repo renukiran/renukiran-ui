@@ -7,7 +7,6 @@ import CandidateProfile from './components/CandidateProfile';
 import Applications from './pages/Applications';
 import MyBatches from './pages/MyBatches';
 import BatchDetail from './components/BatchDetail';
-import Batches from './pages/Batches';
 import BatchManagement from './pages/BatchManagement';
 import Courses from './pages/Courses';
 import UserManagement from './pages/UserManagement';
@@ -63,7 +62,7 @@ const App = () => {
       case 'MyBatches':
         return <MyBatches onNavigate={handleNavigate} />;
       case 'BatchDetail':
-        return <BatchDetail batchData={pageData} />;
+        return <BatchDetail batchData={pageData} onNavigate={handleNavigate} />;
       case 'Courses':
         return <Courses onNavigate={handleNavigate} />;
       case 'BatchManagement':
@@ -83,12 +82,32 @@ const App = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('jwtToken');
+    localStorage.removeItem('rememberMe');
+    setCurrentUser(null);
+    setActivePage('Dashboard');
+    setPageData(null);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar activePage={activePage} onNavigate={handleNavigate} currentUser={currentUser} notificationCount={notificationCount} />
-      <main className="flex-1 overflow-auto">
-        {(activePage === 'Dashboard' || activePage === 'MyBatches' || activePage === 'BatchDetail') ? renderPage() : <div className="p-8">{renderPage()}</div>}
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header */}
+        <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '10px 24px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+          <span style={{ fontSize: '13px', color: '#6b7280' }}>{currentUser?.name}</span>
+          <button
+            onClick={handleLogout}
+            style={{ fontSize: '13px', color: '#dc2626', background: 'none', border: '1px solid #dc2626', borderRadius: '6px', padding: '5px 14px', cursor: 'pointer', fontWeight: 600 }}
+          >
+            Logout
+          </button>
+        </div>
+        <main className="flex-1 overflow-auto">
+          {(activePage === 'Dashboard' || activePage === 'MyBatches' || activePage === 'BatchDetail') ? renderPage() : <div className="p-8">{renderPage()}</div>}
+        </main>
+      </div>
     </div>
   );
 };

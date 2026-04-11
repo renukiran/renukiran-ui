@@ -37,7 +37,7 @@ const Notifications = ({ onCountChange }) => {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [onCountChange]);;
 
   // Initial load
   useEffect(() => {
