@@ -2,6 +2,13 @@
 // Base URL: empty string uses CRA dev proxy (setupProxy.js); set REACT_APP_API_URL for direct backend access
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
+const withQuery = (endpoint, params = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  ).toString();
+  return query ? `${endpoint}?${query}` : endpoint;
+};
+
 const getAuthHeaders = () => {
   const token = localStorage.getItem('jwtToken');
   return {
@@ -80,6 +87,7 @@ export const batchAPI = {
 export const candidateAPI = {
   getCandidates: () => apiCall('/api/v1/candidates', 'GET'),
   getCandidateById: (id) => apiCall(`/api/v1/candidates/${id}`, 'GET'),
+  getCandidatesByBatch: (batchId) => apiCall(`/api/v1/batches/${batchId}/candidates`, 'GET'),
 };
 
 // User/staff endpoints — backend: /api/v1/users
@@ -115,9 +123,10 @@ export const trainerAPI = {
   getTrainers: () => apiCall('/api/v1/trainers', 'GET'),
 };
 
-// Dashboard endpoints — backend: /api/v1/dashboard
+// Dashboard endpoints — backend: /api/v1/admin and /api/v1/office-coordinator
 export const dashboardAPI = {
-  getAdminStats: () => apiCall('/api/v1/dashboard/admin-stats', 'GET'),
+  getAdminDashboard: (adminName) => apiCall(withQuery('/api/v1/admin/dashboard', { adminName }), 'GET'),
+  getOCDashboard: (coordinatorName) => apiCall(withQuery('/api/v1/office-coordinator/dashboard', { coordinatorName }), 'GET'),
 };
 
 // Application form endpoints — backend: /applicationForm
@@ -126,5 +135,20 @@ export const applicationAPI = {
   getApplications: () => apiCall('/applicationForm', 'GET'),
   getApplicationById: (id) => apiCall(`/applicationForm/${id}`, 'GET'),
   updateApplication: (id, formData) => apiCall(`/applicationForm/${id}`, 'PUT', formData),
+};
+
+// Attendance endpoints — backend: /api/v1/batches/{batchId}/attendance
+export const attendanceAPI = {
+  getAttendancePage: (batchId, attendanceDate) =>
+    apiCall(withQuery(`/api/v1/batches/${batchId}/attendance`, { attendanceDate }), 'GET'),
+  saveAttendance: (batchId, data) => apiCall(`/api/v1/batches/${batchId}/attendance`, 'POST', data),
+};
+
+// Assessment endpoints — backend: /api/v1/batches/{batchId}/assessments
+export const assessmentAPI = {
+  getAssessmentPage: (batchId) => apiCall(`/api/v1/batches/${batchId}/assessments`, 'GET'),
+  getAssessmentResults: (batchId) => apiCall(`/api/v1/batches/${batchId}/assessments/results`, 'GET'),
+  saveAssessments: (batchId, data) => apiCall(`/api/v1/batches/${batchId}/assessments`, 'POST', data),
+  publishAssessments: (batchId) => apiCall(`/api/v1/batches/${batchId}/assessments/publish`, 'POST'),
 };
 

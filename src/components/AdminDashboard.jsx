@@ -1,44 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { dashboardAPI, batchAPI, applicationAPI } from '../services/api';
-
-const OPERATIONAL_STATS = [
-  { label: 'Total Courses', value: 8, trend: '+2 this quarter', trendDir: 'up', color: '#2563eb' },
-  { label: 'Active Batches', value: 5, trend: 'Across 4 courses', trendDir: 'flat', color: '#2563eb' },
-  { label: 'Candidates Enrolled', value: 142, trend: '+18 this month', trendDir: 'up', color: '#16a34a' },
-  { label: 'Pending Assignments', value: 23, trend: 'Needs attention', trendDir: 'down', color: '#d97706' },
-];
-
-const IMPACT_STATS = [
-  { label: 'Assessment Pass Rate', value: '78%', trend: '+5% from last batch', trendDir: 'up', color: '#16a34a' },
-  { label: 'Placement Rate', value: '62%', trend: 'Target: 70%', trendDir: 'flat', color: '#d97706' },
-  { label: 'Job Retention', value: '85%', trend: '6-month retention', trendDir: 'up', color: '#16a34a' },
-  { label: 'Avg Attendance', value: '88%', trend: 'Above 80% target', trendDir: 'up', color: '#16a34a' },
-];
-
-const RECENT_APPLICATIONS = [
-  { name: 'Priya Sharma', course: 'Stitching Basic', status: 'New', date: '10 Mar 2026' },
-  { name: 'Anita Devi', course: 'Computer Fundamentals', status: 'New', date: '10 Mar 2026' },
-  { name: 'Meena Kumari', course: 'Beauty Basic', status: 'Under Review', date: '9 Mar 2026' },
-  { name: 'Sunita Yadav', course: 'Stitching Basic', status: 'Selected', date: '8 Mar 2026' },
-  { name: 'Rekha Patel', course: 'Computer Fundamentals', status: 'Assigned', date: '7 Mar 2026' },
-];
-
-const BATCH_CAPACITY = [
-  { name: 'Stitching Basic — Batch 3', enrolled: 18, max: 20 },
-  { name: 'Computer Fund. — Batch 2', enrolled: 20, max: 20 },
-  { name: 'Beauty Basic — Batch 1', enrolled: 12, max: 20 },
-];
-
-const ATTENDANCE_ALERTS = [
-  { name: 'Kavita Singh', batch: 'Stitching Basic — Batch 3', pct: 62 },
-  { name: 'Deepa Rani', batch: 'Computer Fund. — Batch 2', pct: 68 },
-];
+import { dashboardAPI } from '../services/api';
+import { formatDisplayDate } from '../utils/applicationForm';
 
 const getStatusBadgeStyle = (status) => {
   const styles = {
     New: { background: '#dbeafe', color: '#1d4ed8' },
-    'Under Review': { background: '#fef3c7', color: '#92400e' },
-    Selected: { background: '#dcfce7', color: '#166534' },
+    'Assigned To Batch': { background: '#e0e7ff', color: '#3730a3' },
+    'Training Started': { background: '#cffafe', color: '#0e7490' },
+    Placed: { background: '#dcfce7', color: '#166534' },
+    'Training Completed': { background: '#fef3c7', color: '#92400e' },
     Assigned: { background: '#e0e7ff', color: '#3730a3' },
     Rejected: { background: '#fee2e2', color: '#991b1b' },
   };
@@ -83,77 +53,59 @@ const StatCard = ({ label, value, trend, trendDir, color }) => {
 };
 
 const AdminDashboard = ({ currentUser, onNavigate }) => {
-  const [apiStats, setApiStats] = useState(null);
-  const [recentApps, setRecentApps] = useState([]);
-  const [batchCapacity, setBatchCapacity] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    dashboardAPI.getAdminStats()
-      .then((data) => setApiStats(data))
-      .catch((err) => console.error('Failed to load admin stats:', err));
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await dashboardAPI.getAdminDashboard(currentUser?.name);
+        setDashboard(response ?? null);
+      } catch (loadError) {
+        setError('Failed to load admin dashboard');
+        console.error('Failed to load admin dashboard:', loadError);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    batchAPI.getBatches()
-      .then((data) => {
-        const list = data?.content ?? (Array.isArray(data) ? data : []);
-        setBatchCapacity(list.slice(0, 4).map((b) => ({
-          name: `${b.batchName ?? b.name ?? '—'}`,
-          enrolled: b.enrolledCount ?? b.currentEnrollment ?? 0,
-          max: b.capacity ?? b.maxCapacity ?? 20,
-        })));
-      })
-      .catch((err) => console.error('Failed to load batches:', err));
-
-    applicationAPI.getApplications()
-      .then((res) => {
-        const list = res?.data ?? (Array.isArray(res) ? res : []);
-        const trackLabel = (t) => {
-          const map = {
-            TAILORING: 'Tailoring', BEAUTY_AND_GROOMING: 'Beauty & Grooming',
-            FOOD_BUSINESS: 'Food Business', HANDICRAFT: 'Handicraft',
-            HOME_BASED_PRODUCTION: 'Home Production', OTHER: 'Other',
-          };
-          return map[t] || t || '—';
-        };
-        setRecentApps(list.slice(0, 5).map((a) => ({
-          name: a.fullName ?? a.full_name ?? '—',
-          course: trackLabel(a.preferredExperienceTrack ?? a.preferred_experience_track),
-          status: 'Applied',
-          date: '',
-        })));
-      })
-      .catch((err) => console.error('Failed to load applications:', err));
-  }, []);
+    loadDashboard();
+  }, [currentUser?.name]);
 
   const welcomeName = currentUser?.name?.split(' ')?.[0] || 'Admin';
+  const welcomeText = dashboard?.welcomeMessage || `Welcome back, ${welcomeName}. Here's your operational overview.`;
 
-  const operationalStats = apiStats
-    ? [
-        { label: 'Total Courses',        value: apiStats.totalCourses        ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
-        { label: 'Active Batches',        value: apiStats.activeBatches       ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
-        { label: 'Candidates Enrolled',   value: apiStats.candidatesEnrolled  ?? '—', trend: '', trendDir: 'up',   color: '#16a34a' },
-        { label: 'Pending Assignments',   value: apiStats.pendingAssignments  ?? '—', trend: '', trendDir: 'down', color: '#d97706' },
-      ]
-    : OPERATIONAL_STATS;
+  const operationalStats = [
+    { label: dashboard?.totalCourses?.label ?? 'Total Courses', value: dashboard?.totalCourses?.value ?? '—', trend: dashboard?.totalCourses?.helperText ?? '', trendDir: 'flat', color: '#2563eb' },
+    { label: dashboard?.activeBatches?.label ?? 'Active Batches', value: dashboard?.activeBatches?.value ?? '—', trend: dashboard?.activeBatches?.helperText ?? '', trendDir: 'flat', color: '#2563eb' },
+    { label: dashboard?.candidatesEnrolled?.label ?? 'Candidates Enrolled', value: dashboard?.candidatesEnrolled?.value ?? '—', trend: dashboard?.candidatesEnrolled?.helperText ?? '', trendDir: 'up', color: '#16a34a' },
+    { label: dashboard?.pendingAssignments?.label ?? 'Pending Assignments', value: dashboard?.pendingAssignments?.value ?? '—', trend: dashboard?.pendingAssignments?.helperText ?? '', trendDir: 'down', color: '#d97706' },
+  ];
 
-  const impactStats = apiStats
-    ? [
-        { label: 'Assessment Pass Rate', value: apiStats.assessmentPassRate ?? '—', trend: '', trendDir: 'up',   color: '#16a34a' },
-        { label: 'Placement Rate',        value: apiStats.placementRate      ?? '—', trend: `Target: 70%`,        trendDir: 'flat', color: '#d97706' },
-        { label: 'Job Retention',         value: apiStats.jobRetention       ?? '—', trend: '6-month retention', trendDir: 'up',   color: '#16a34a' },
-        { label: 'Avg Attendance',        value: apiStats.avgAttendance      ?? '—', trend: 'Above 80% target',  trendDir: 'up',   color: '#16a34a' },
-      ]
-    : IMPACT_STATS;
+  const impactStats = [
+    { label: dashboard?.assessmentPassRate?.label ?? 'Assessment Pass Rate', value: dashboard?.assessmentPassRate?.value ?? '—', trend: dashboard?.assessmentPassRate?.helperText ?? '', trendDir: 'up', color: '#16a34a' },
+    { label: dashboard?.placementRate?.label ?? 'Placement Rate', value: dashboard?.placementRate?.value ?? '—', trend: dashboard?.placementRate?.helperText ?? '', trendDir: 'flat', color: '#d97706' },
+    { label: dashboard?.jobRetention?.label ?? 'Job Retention', value: dashboard?.jobRetention?.value ?? '—', trend: dashboard?.jobRetention?.helperText ?? '', trendDir: 'up', color: '#16a34a' },
+    { label: dashboard?.averageAttendance?.label ?? 'Avg Attendance', value: dashboard?.averageAttendance?.value ?? '—', trend: dashboard?.averageAttendance?.helperText ?? '', trendDir: 'up', color: '#16a34a' },
+  ];
 
-  const displayApps   = recentApps.length   > 0 ? recentApps   : RECENT_APPLICATIONS;
-  const displayBatches = batchCapacity.length > 0 ? batchCapacity : BATCH_CAPACITY;
+  const displayApps = dashboard?.recentApplications ?? [];
+  const displayBatches = dashboard?.batchCapacityOverview ?? [];
+  const attendanceAlerts = dashboard?.attendanceAlerts ?? [];
 
   return (
     <div style={{ background: '#f9fafb', padding: '32px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#111827', margin: '0 0 8px 0' }}>Dashboard</h1>
-        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Welcome back, {welcomeName}. Here's your operational overview.</p>
+        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>{welcomeText}</p>
       </div>
+
+      {error && <div style={{ color: '#b91c1c', marginBottom: '16px' }}>{error}</div>}
+      {loading && !dashboard && <div style={{ color: '#6b7280', marginBottom: '16px' }}>Loading dashboard...</div>}
 
       {/* Operational Stats */}
       <div style={{ marginBottom: '32px' }}>
@@ -197,18 +149,29 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
               {displayApps.map((app, idx) => {
                 const badgeStyle = getStatusBadgeStyle(app.status);
                 return (
-                  <tr key={idx} style={{ borderBottom: idx < displayApps.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                    <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{app.name}</td>
-                    <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{app.course}</td>
+                  <tr
+                    key={app.candidateId ?? idx}
+                    style={{ borderBottom: idx < displayApps.length - 1 ? '1px solid #f3f4f6' : 'none', cursor: app.candidateId ? 'pointer' : 'default' }}
+                    onClick={() => app.candidateId && onNavigate && onNavigate('CandidateProfile', { id: app.candidateId, name: app.candidateName })}
+                  >
+                    <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{app.candidateName}</td>
+                    <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{app.courseName}</td>
                     <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>
                       <span style={{ background: badgeStyle.background, color: badgeStyle.color, borderRadius: '12px', padding: '3px 10px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
                         {app.status}
                       </span>
                     </td>
-                    <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{app.date}</td>
+                    <td style={{ fontSize: '13.5px', color: '#374151', padding: '12px 0' }}>{formatDisplayDate(app.appliedDate)}</td>
                   </tr>
                 );
               })}
+              {displayApps.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ fontSize: '13.5px', color: '#6b7280', padding: '16px 0', textAlign: 'center' }}>
+                    No recent applications available.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -221,19 +184,21 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
           <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Batch Capacity</h3>
           <div>
             {displayBatches.map((batch, idx) => {
-              const pct = batch.max > 0 ? Math.round((batch.enrolled / batch.max) * 100) : 0;
+              const pct = batch.occupancyPercentage ?? (batch.capacity > 0 ? Math.round((batch.enrolledCount / batch.capacity) * 100) : 0);
               return (
-                <div key={idx} style={{ marginBottom: idx < displayBatches.length - 1 ? '16px' : 0 }}>
+                <div key={batch.batchId ?? idx} style={{ marginBottom: idx < displayBatches.length - 1 ? '16px' : 0, cursor: batch.batchId ? 'pointer' : 'default' }} onClick={() => batch.batchId && onNavigate && onNavigate('BatchDetail', { rawId: batch.batchId, id: batch.batchName })}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#111827' }}>{batch.name}</span>
-                    <span style={{ fontSize: '13.5px', color: '#6b7280' }}>{batch.enrolled}/{batch.max}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#111827' }}>{batch.courseName} — {batch.batchName}</span>
+                    <span style={{ fontSize: '13.5px', color: '#6b7280' }}>{batch.enrolledCount}/{batch.capacity}</span>
                   </div>
                   <div style={{ height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', background: getCapacityBarColor(pct), width: `${pct}%`, transition: 'width 0.3s ease' }} />
                   </div>
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>{batch.batchStatus}</div>
                 </div>
               );
             })}
+            {displayBatches.length === 0 && <div style={{ fontSize: '13.5px', color: '#6b7280' }}>No batch capacity data available.</div>}
           </div>
         </div>
 
@@ -241,9 +206,9 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
         <div style={{ background: 'white', borderRadius: '10px', padding: '20px 22px' }}>
           <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Attendance Alerts</h3>
           <div>
-            {ATTENDANCE_ALERTS.map((alert, idx) => (
+            {attendanceAlerts.map((alert, idx) => (
               <div
-                key={idx}
+                key={alert.candidateId ?? idx}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -252,7 +217,7 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
                   background: '#fef3c7',
                   border: '1px solid #fcd34d',
                   borderRadius: '8px',
-                  marginBottom: idx < ATTENDANCE_ALERTS.length - 1 ? '12px' : 0,
+                  marginBottom: idx < attendanceAlerts.length - 1 ? '12px' : 0,
                 }}
               >
                 <div
@@ -273,12 +238,13 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
                   ⚠
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#111827' }}>{alert.name}</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>{alert.batch}</div>
+                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#111827' }}>{alert.candidateName}</div>
+                  <div style={{ fontSize: '12px', color: '#6b7280' }}>{alert.courseName} — {alert.batchName}</div>
                 </div>
-                <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#dc2626', flexShrink: 0 }}>{alert.pct}%</span>
+                <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#dc2626', flexShrink: 0 }}>{alert.attendancePercentage}%</span>
               </div>
             ))}
+            {attendanceAlerts.length === 0 && <div style={{ fontSize: '13.5px', color: '#6b7280' }}>No low attendance alerts right now.</div>}
           </div>
         </div>
       </div>

@@ -7,7 +7,6 @@ import CandidateProfile from './components/CandidateProfile';
 import Applications from './pages/Applications';
 import MyBatches from './pages/MyBatches';
 import BatchDetail from './components/BatchDetail';
-import Batches from './pages/Batches';
 import BatchManagement from './pages/BatchManagement';
 import Courses from './pages/Courses';
 import UserManagement from './pages/UserManagement';
@@ -63,7 +62,7 @@ const App = () => {
       case 'MyBatches':
         return <MyBatches onNavigate={handleNavigate} />;
       case 'BatchDetail':
-        return <BatchDetail batchData={pageData} />;
+        return <BatchDetail batchData={pageData} onNavigate={handleNavigate} />;
       case 'Courses':
         return <Courses onNavigate={handleNavigate} />;
       case 'BatchManagement':

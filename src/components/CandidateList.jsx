@@ -1,49 +1,67 @@
-import React, { useState, useMemo } from 'react';
-
-const CANDIDATES = [
-  { initials: 'PS', name: 'Priya Sharma', phone: '9876543210', course: 'Stitching', status: 'New', date: 'Mar 10, 2026', avatarColor: '#7c3aed' },
-  { initials: 'KR', name: 'Kavita Rani', phone: '9876543211', course: 'Computers', status: 'Under Review', date: 'Mar 9, 2026', avatarColor: '#db2777' },
-  { initials: 'SM', name: 'Sunita Mehra', phone: '9876543212', course: 'Beauty', status: 'Assigned', date: 'Mar 8, 2026', avatarColor: '#16a34a' },
-  { initials: 'AK', name: 'Anita Kumari', phone: '9876543213', course: 'Stitching', status: 'Training', date: 'Mar 7, 2026', avatarColor: '#0891b2' },
-  { initials: 'RP', name: 'Radha Patel', phone: '9876543214', course: 'Handicraft', status: 'Placed', date: 'Mar 5, 2026', avatarColor: '#ea580c' },
-  { initials: 'MD', name: 'Meena Devi', phone: '9876543215', course: 'Computers', status: 'Draft', date: 'Mar 10, 2026', avatarColor: '#d97706' },
-  { initials: 'LK', name: 'Lakshmi K.', phone: '9876543216', course: 'Food Enterprise', status: 'Selected', date: 'Mar 6, 2026', avatarColor: '#0284c7' },
-  { initials: 'NB', name: 'Neha Banerjee', phone: '9876543217', course: 'Bag Making', status: 'Not Placed', date: 'Mar 3, 2026', avatarColor: '#9333ea' },
-];
+import React, { useEffect, useMemo, useState } from 'react';
+import { candidateAPI } from '../services/api';
+import {
+  formatCandidateStatus,
+  formatDisplayDate,
+} from '../utils/applicationForm';
 
 const STATUS_BADGE_STYLES = {
   New: { background: '#dbeafe', color: '#1d4ed8' },
-  'Under Review': { background: '#fef3c7', color: '#92400e' },
   Assigned: { background: '#dcfce7', color: '#166534' },
   Training: { background: '#ccfbf1', color: '#0f766e' },
+  'Placement Pending': { background: '#fef3c7', color: '#92400e' },
   Placed: { background: '#d1fae5', color: '#065f46' },
-  Draft: { background: '#f3f4f6', color: '#6b7280' },
-  Selected: { background: '#cffafe', color: '#0e7490' },
-  'Not Placed': { background: '#fee2e2', color: '#b91c1c' },
 };
 
-const STATUS_OPTIONS = ['All Status', 'New', 'Under Review', 'Assigned', 'Training', 'Placed', 'Draft', 'Selected', 'Not Placed'];
-const COURSE_OPTIONS = ['All Courses', 'Stitching', 'Computers', 'Beauty', 'Handicraft', 'Food Enterprise', 'Bag Making'];
-
 const CandidateList = ({ onNavigate }) => {
+  const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [selectedCourse, setSelectedCourse] = useState('All Courses');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  // Filter candidates
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await candidateAPI.getCandidates();
+        const list = Array.isArray(response) ? response : [];
+        setCandidates(list.map((candidate) => ({
+          id: candidate.candidateId,
+          name: candidate.name || 'N/A',
+          phone: candidate.mobile || 'N/A',
+          course: candidate.courseName || 'N/A',
+          status: formatCandidateStatus(candidate.status),
+          date: formatDisplayDate(candidate.createdDate),
+        })));
+      } catch (loadError) {
+        setError(loadError?.message || 'Failed to load candidates.');
+        console.error(loadError);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCandidates();
+  }, []);
+
+  const statusOptions = ['All Status', ...new Set(candidates.map((candidate) => candidate.status).filter(Boolean))];
+  const courseOptions = ['All Courses', ...new Set(candidates.map((candidate) => candidate.course).filter(Boolean))];
+
   const filteredCandidates = useMemo(() => {
-    return CANDIDATES.filter((candidate) => {
+    return candidates.filter((candidate) => {
       const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) || candidate.phone.includes(searchTerm);
       const matchesStatus = selectedStatus === 'All Status' || candidate.status === selectedStatus;
       const matchesCourse = selectedCourse === 'All Courses' || candidate.course === selectedCourse;
       return matchesSearch && matchesStatus && matchesCourse;
     });
-  }, [searchTerm, selectedStatus, selectedCourse]);
+  }, [candidates, searchTerm, selectedStatus, selectedCourse]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredCandidates.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredCandidates.length / itemsPerPage));
   const startIdx = (currentPage - 1) * itemsPerPage;
   const paginatedCandidates = filteredCandidates.slice(startIdx, startIdx + itemsPerPage);
 
@@ -98,6 +116,8 @@ const CandidateList = ({ onNavigate }) => {
         </button>
       </div>
 
+      {error && <div style={{ color: '#b91c1c', marginBottom: '16px' }}>{error}</div>}
+
       {/* Filters Bar */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
         {/* Search Input */}
@@ -147,7 +167,7 @@ const CandidateList = ({ onNavigate }) => {
             paddingRight: '32px',
           }}
         >
-          {STATUS_OPTIONS.map((status) => (
+          {statusOptions.map((status) => (
             <option key={status} value={status}>
               {status}
             </option>
@@ -176,7 +196,7 @@ const CandidateList = ({ onNavigate }) => {
             paddingRight: '32px',
           }}
         >
-          {COURSE_OPTIONS.map((course) => (
+          {courseOptions.map((course) => (
             <option key={course} value={course}>
               {course}
             </option>
@@ -185,88 +205,78 @@ const CandidateList = ({ onNavigate }) => {
       </div>
 
       {/* Table */}
-      <div style={{ overflowX: 'auto', marginBottom: '0' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
-                Name
-              </th>
-              <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
-                Phone
-              </th>
-              <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
-                Course
-              </th>
-              <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
-                Status
-              </th>
-              <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
-                Date Applied
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedCandidates.map((candidate, idx) => {
-              const badgeStyle = STATUS_BADGE_STYLES[candidate.status] || { background: '#f3f4f6', color: '#6b7280' };
-              return (
-                <tr
-                  key={idx}
-                  onClick={() => onNavigate('CandidateProfile', candidate)}
-                  style={{
-                    borderBottom: '1px solid #f3f4f6',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#f9fafb')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div
+      {loading ? (
+        <div style={{ color: '#6b7280' }}>Loading candidates...</div>
+      ) : (
+        <div style={{ overflowX: 'auto', marginBottom: '0' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
+                <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
+                  Name
+                </th>
+                <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
+                  Phone
+                </th>
+                <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
+                  Course
+                </th>
+                <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
+                  Status
+                </th>
+                <th style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', fontWeight: 600, padding: '10px 16px', textAlign: 'left', textTransform: 'uppercase' }}>
+                  Date Applied
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedCandidates.map((candidate) => {
+                const badgeStyle = STATUS_BADGE_STYLES[candidate.status] || { background: '#f3f4f6', color: '#6b7280' };
+                return (
+                  <tr
+                    key={candidate.id}
+                    onClick={() => onNavigate('CandidateProfile', { id: candidate.id, name: candidate.name })}
+                    style={{
+                      borderBottom: '1px solid #f3f4f6',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f9fafb')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#111827', fontWeight: 600 }}>{candidate.name}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>{candidate.phone}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>{candidate.course}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>
+                      <span
                         style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
-                          background: candidate.avatarColor,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '13px',
-                          fontWeight: 700,
-                          flexShrink: 0,
+                          background: badgeStyle.background,
+                          color: badgeStyle.color,
+                          borderRadius: '12px',
+                          padding: '4px 12px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          display: 'inline-block',
                         }}
                       >
-                        {candidate.initials}
-                      </div>
-                      <span style={{ fontWeight: 500, color: '#111827' }}>{candidate.name}</span>
-                    </div>
+                        {candidate.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{candidate.date}</td>
+                  </tr>
+                );
+              })}
+              {paginatedCandidates.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: '24px 16px', color: '#6b7280', textAlign: 'center' }}>
+                    No candidates found.
                   </td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>{candidate.phone}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>{candidate.course}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>
-                    <span
-                      style={{
-                        background: badgeStyle.background,
-                        color: badgeStyle.color,
-                        borderRadius: '12px',
-                        padding: '4px 12px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        display: 'inline-block',
-                      }}
-                    >
-                      {candidate.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{candidate.date}</td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Pagination */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '1px solid #f3f4f6' }}>

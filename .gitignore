@@ -1,1 +1,5 @@
 node_modules
+
+# Local Playwright artifacts
+playwright-demo-videos/
+playwright-clickthrough-failure.png

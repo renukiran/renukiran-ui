@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft } from 'lucide-react';
 import StepIndicator from '../components/StepIndicator';
@@ -7,16 +7,20 @@ import Step2Household from '../components/Step2Household';
 import Step3EducationWork from '../components/Step3EducationWork';
 import Step4TrainingInterest from '../components/Step4TrainingInterest';
 import Step5NeedAssessment from '../components/Step5NeedAssessment';
+import { applicationAPI } from '../services/api';
+import { toApplicationPayload } from '../utils/applicationForm';
+
+const APPLICATION_DRAFT_KEY = 'renukiran.applicationDraft';
 
 const Applications = ({ onNavigate }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
     trigger,
     getValues,
@@ -59,7 +63,19 @@ const Applications = ({ onNavigate }) => {
     },
   });
 
-  const formData = watch();
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(APPLICATION_DRAFT_KEY);
+      if (!savedDraft) {
+        return;
+      }
+
+      reset(JSON.parse(savedDraft));
+      setSuccess('Loaded saved draft.');
+    } catch (draftError) {
+      console.error('Failed to restore saved draft', draftError);
+    }
+  }, [reset]);
 
   const stepValidationRules = {
     1: ['batch', 'fullName', 'age', 'fatherName', 'mobile', 'address', 'localResident', 'bankAccount', 'caste'],
@@ -85,8 +101,9 @@ const Applications = ({ onNavigate }) => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Saving draft with data:', getValues());
-      alert('Draft saved successfully!');
+      setSuccess(null);
+      localStorage.setItem(APPLICATION_DRAFT_KEY, JSON.stringify(getValues()));
+      setSuccess('Draft saved locally.');
     } catch (err) {
       setError('Failed to save draft');
       console.error(err);
@@ -95,17 +112,28 @@ const Applications = ({ onNavigate }) => {
     }
   };
 
-      const onSubmit = async (data) => {
+  const onSubmit = async (data) => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Submitting application with data:', data);
-      alert('Application submitted successfully!');
+      setSuccess(null);
+      const response = await applicationAPI.submitApplication(toApplicationPayload(data));
+      const savedApplication = response?.data ?? response;
+      localStorage.removeItem(APPLICATION_DRAFT_KEY);
       reset();
       setCurrentStep(1);
+      if (savedApplication?.id) {
+        onNavigate('CandidateProfile', {
+          id: savedApplication.id,
+          name: savedApplication.fullName,
+        });
+        return;
+      }
+
+      setSuccess('Application submitted successfully.');
       onNavigate('CandidateList');
     } catch (err) {
-      setError('Failed to submit application');
+      setError(err?.message || 'Failed to submit application');
       console.error(err);
     } finally {
       setLoading(false);
@@ -134,6 +162,12 @@ const Applications = ({ onNavigate }) => {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+          {success}
         </div>
       )}
 

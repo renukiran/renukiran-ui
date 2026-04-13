@@ -28,7 +28,6 @@ const Notifications = ({ onCountChange }) => {
         }));
         setNotifications(mapped);
         setUnreadCount(mapped.filter((n) => !n.read).length);
-        if (onCountChange) onCountChange(mapped.filter((n) => !n.read).length);
         setLastRefreshed(new Date());
       }
     } catch (err) {
@@ -50,14 +49,19 @@ const Notifications = ({ onCountChange }) => {
     return () => clearInterval(intervalRef.current);
   }, [fetchNotifications]);
 
+  useEffect(() => {
+    if (onCountChange) {
+      onCountChange(unreadCount);
+    }
+  }, [onCountChange, unreadCount]);
+
   const handleMarkAsRead = async (id) => {
     try {
       await notificationAPI.markAsRead(id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, read: true } : n))
       );
-      setUnreadCount((c) => Math.max(0, c - 1));
-      if (onCountChange) onCountChange(Math.max(0, unreadCount - 1));
+      setUnreadCount((count) => Math.max(0, count - 1));
     } catch (err) {
       console.error('Failed to mark as read:', err);
     }
@@ -69,7 +73,6 @@ const Notifications = ({ onCountChange }) => {
       await notificationAPI.markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
-      if (onCountChange) onCountChange(0);
     } catch (err) {
       setError('Failed to mark all as read');
     } finally {
@@ -91,7 +94,6 @@ const Notifications = ({ onCountChange }) => {
       };
       setNotifications((prev) => [mapped, ...prev]);
       setUnreadCount((c) => c + 1);
-      if (onCountChange) onCountChange(unreadCount + 1);
       setNewMessage('');
     } catch (err) {
       setError('Failed to create notification');
