@@ -1,6 +1,6 @@
 // API Service with JWT token handling
-// Always use relative paths - setupProxy.js handles routing
-const API_BASE_URL = '';
+// Proxy is disabled — using REACT_APP_API_URL directly for all API calls
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://renukiran-services.onrender.com';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('jwtToken');
