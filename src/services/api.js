@@ -80,6 +80,7 @@ export const batchAPI = {
 export const candidateAPI = {
   getCandidates: () => apiCall('/api/v1/candidates', 'GET'),
   getCandidateById: (id) => apiCall(`/api/v1/candidates/${id}`, 'GET'),
+  getCandidatesByBatchId: (batchId) => apiCall(`/api/v1/batches/${batchId}/candidates`, 'GET'),
 };
 
 // User/staff endpoints — backend: /api/v1/users
@@ -113,6 +114,16 @@ export const notificationAPI = {
 // Trainer endpoints — backend: /api/v1/trainers
 export const trainerAPI = {
   getTrainers: () => apiCall('/api/v1/trainers', 'GET'),
+  getDashboard: (trainerId) => apiCall(`/api/v1/trainers/${trainerId}/dashboard`, 'GET'),
+};
+
+// Attendance endpoints — backend: /api/v1/batches/{batchId}/attendance
+export const attendanceAPI = {
+  getAttendancePage: (batchId, attendanceDate) => {
+    const query = attendanceDate ? `?attendanceDate=${encodeURIComponent(attendanceDate)}` : '';
+    return apiCall(`/api/v1/batches/${batchId}/attendance${query}`, 'GET');
+  },
+  saveAttendance: (batchId, data) => apiCall(`/api/v1/batches/${batchId}/attendance`, 'POST', data),
 };
 
 // Dashboard endpoints — backend: /api/v1/dashboard

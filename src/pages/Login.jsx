@@ -28,7 +28,13 @@ const Login = ({ onLoginSuccess }) => {
           COORDINATOR: 'oc',
         };
         const role = roleMap[response.userType?.toUpperCase()] || 'oc';
-        onLoginSuccess({ email, role, name: response.userName || email });
+        onLoginSuccess({
+          email,
+          role,
+          name: response.userName || email,
+          userId: response.userID ?? response.userId ?? null,
+          trainerId: response.trainerId ?? response.trainerID ?? null,
+        });
       } else {
         setError(response?.message || 'Invalid credentials. Please try again.');
       }

@@ -60,7 +60,7 @@ const App = () => {
       case 'CandidateProfile':
         return <CandidateProfile candidateData={pageData} onNavigate={handleNavigate} />;
       case 'MyBatches':
-        return <MyBatches onNavigate={handleNavigate} />;
+        return <MyBatches currentUser={currentUser} onNavigate={handleNavigate} />;
       case 'BatchDetail':
         return <BatchDetail batchData={pageData} onNavigate={handleNavigate} />;
       case 'Courses':
