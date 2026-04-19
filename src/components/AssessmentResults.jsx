@@ -1,47 +1,59 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { assessmentAPI } from '../services/api';
 
-const RESULTS_DATA = [
-  { id: 1, name: 'Priya S.', mcq: 85, practical: 90, caseStudy: 78, final: 86.1 },
-  { id: 2, name: 'Kavita R.', mcq: 60, practical: 45, caseStudy: 50, final: 50.0 },
-  { id: 3, name: 'Sunita M.', mcq: 70, practical: 80, caseStudy: 65, final: 74.0 },
-  { id: 4, name: 'Anita K.', mcq: 40, practical: 35, caseStudy: 30, final: 35.0 },
-  { id: 5, name: 'Radha P.', mcq: 75, practical: 85, caseStudy: 70, final: 79.0 },
-];
+const AssessmentResults = ({ resultData, onNavigate }) => {
+  const batchId = resultData?.batchId;
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-const AssessmentResults = () => {
-  const [results] = useState(RESULTS_DATA);
+  useEffect(() => {
+    let cancelled = false;
 
-  const calculateStats = () => {
-    let passCount = 0;
-    let failCount = 0;
-    let totalScore = 0;
-    let highestScore = 0;
+    const loadResults = async () => {
+      if (!batchId) {
+        setLoading(false);
+        setError('Assessment results are not available for this batch.');
+        return;
+      }
 
-    results.forEach(r => {
-      if (r.final >= 50) passCount++;
-      else failCount++;
-      totalScore += r.final;
-      if (r.final > highestScore) highestScore = r.final;
-    });
+      try {
+        setLoading(true);
+        setError('');
+        const data = await assessmentAPI.getAssessmentResultsPage(batchId);
+        if (cancelled) return;
+        setResults(data);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to load assessment results', err);
+          setError(err.message || 'Failed to load assessment results.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
-    const avgScore = (totalScore / results.length).toFixed(1);
-    const passRate = ((passCount / results.length) * 100).toFixed(0);
+    loadResults();
 
-    return { passCount, failCount, avgScore, passRate, highestScore };
-  };
-
-  const stats = calculateStats();
+    return () => {
+      cancelled = true;
+    };
+  }, [batchId]);
 
   const handleExportCSV = () => {
+    if (!results) {
+      return;
+    }
+
     const headers = ['#', 'Name', 'MCQ / 100', 'Practical / 100', 'Case Study / 100', 'Final %', 'Result'];
-    const rows = results.map((r, idx) => [
-      idx + 1,
-      r.name,
-      r.mcq,
-      r.practical,
-      r.caseStudy,
-      r.final.toFixed(1),
-      r.final >= 50 ? 'Pass' : 'Fail',
+    const rows = (results.candidates || []).map((candidate, idx) => [
+      candidate.rowNumber ?? idx + 1,
+      candidate.candidateName,
+      candidate.mcqScore,
+      candidate.practicalScore,
+      candidate.caseStudyScore,
+      Number(candidate.finalPercentage ?? 0).toFixed(1),
+      candidate.result,
     ]);
 
     const csvContent = [
@@ -58,20 +70,81 @@ const AssessmentResults = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleBack = () => {
+    if (onNavigate && resultData?.batchData) {
+      onNavigate('BatchDetail', resultData.batchData);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ background: '#ffffff', padding: '28px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#111827', marginBottom: '24px' }}>Assessment Results</h1>
+        <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280', fontSize: '14px' }}>Loading assessment results...</div>
+      </div>
+    );
+  }
+
+  if (error || !results) {
+    return (
+      <div style={{ background: '#ffffff', padding: '28px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+        {resultData?.batchData && (
+          <button
+            onClick={handleBack}
+            style={{ marginBottom: '20px', border: 'none', background: 'none', color: '#2563eb', fontSize: '14px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+          >
+            ← Back to Batch
+          </button>
+        )}
+        <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px 16px', borderRadius: '8px', fontSize: '14px' }}>
+          {error || 'Assessment results are not available.'}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: '#ffffff', padding: '28px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-      {/* Header */}
+      {resultData?.batchData && (
+        <button
+          onClick={handleBack}
+          style={{ marginBottom: '20px', border: 'none', background: 'none', color: '#2563eb', fontSize: '14px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+        >
+          ← Back to Batch
+        </button>
+      )}
+
       <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#111827', marginBottom: '24px' }}>
-        Assessment Results — Stitching Basic, Batch 1
+        Assessment Results — {results.courseName}, {results.batchName}
       </h1>
 
-      {/* Summary Stat Cards */}
+      <div style={{
+        background: '#eff6ff',
+        border: '1px solid #bfdbfe',
+        borderRadius: '8px',
+        padding: '12px 18px',
+        marginBottom: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}>
+        <span style={{ color: '#2563eb', fontSize: '16px' }}>i</span>
+        <span style={{ fontSize: '13px', color: '#374151' }}>
+          Course Weights: MCQ ({results.mcqWeight}%) | Practical ({results.practicalWeight}%) | Case Study ({results.caseStudyWeight}%) | Pass Threshold: {results.passThreshold}%
+        </span>
+        {results.published && (
+          <span style={{ marginLeft: 'auto', background: '#dcfce7', color: '#166534', borderRadius: '999px', padding: '4px 12px', fontSize: '12px', fontWeight: 700 }}>
+            Published
+          </span>
+        )}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>
         {[
-          { label: 'TOTAL ASSESSED', value: results.length, color: '#111827' },
-          { label: 'PASS RATE', value: `${stats.passRate}%`, color: '#16a34a' },
-          { label: 'AVG SCORE', value: `${stats.avgScore}%`, color: '#111827' },
-          { label: 'HIGHEST SCORE', value: `${stats.highestScore.toFixed(1)}%`, color: '#111827' },
+          { label: 'TOTAL ASSESSED', value: results.totalAssessed ?? 0, color: '#111827' },
+          { label: 'PASS RATE', value: `${Number(results.passRate ?? 0).toFixed(1)}%`, color: '#16a34a' },
+          { label: 'AVG SCORE', value: `${Number(results.averageScore ?? 0).toFixed(1)}%`, color: '#111827' },
+          { label: 'HIGHEST SCORE', value: `${Number(results.highestScore ?? 0).toFixed(1)}%`, color: '#111827' },
         ].map((card, idx) => (
           <div
             key={idx}
@@ -92,7 +165,6 @@ const AssessmentResults = () => {
         ))}
       </div>
 
-      {/* Results Table */}
       <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
         <thead>
           <tr>
@@ -116,16 +188,16 @@ const AssessmentResults = () => {
           </tr>
         </thead>
         <tbody>
-          {results.map((result, idx) => {
-            const isPass = result.final >= 50;
+          {(results.candidates || []).map((result, idx) => {
+            const isPass = result.result === 'Pass';
             return (
-              <tr key={result.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ fontSize: '14px', color: '#6b7280', padding: '16px' }}>{idx + 1}</td>
-                <td style={{ fontSize: '14px', fontWeight: 500, color: '#111827', padding: '16px' }}>{result.name}</td>
-                <td style={{ fontSize: '14px', color: '#374151', textAlign: 'center', padding: '16px' }}>{result.mcq}</td>
-                <td style={{ fontSize: '14px', color: '#374151', textAlign: 'center', padding: '16px' }}>{result.practical}</td>
-                <td style={{ fontSize: '14px', color: '#374151', textAlign: 'center', padding: '16px' }}>{result.caseStudy}</td>
-                <td style={{ fontSize: '14px', fontWeight: 700, color: '#111827', padding: '16px' }}>{result.final.toFixed(1)}%</td>
+              <tr key={`${result.rowNumber}-${result.candidateName}`} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                <td style={{ fontSize: '14px', color: '#6b7280', padding: '16px' }}>{result.rowNumber ?? idx + 1}</td>
+                <td style={{ fontSize: '14px', fontWeight: 500, color: '#111827', padding: '16px' }}>{result.candidateName}</td>
+                <td style={{ fontSize: '14px', color: '#374151', textAlign: 'center', padding: '16px' }}>{result.mcqScore}</td>
+                <td style={{ fontSize: '14px', color: '#374151', textAlign: 'center', padding: '16px' }}>{result.practicalScore}</td>
+                <td style={{ fontSize: '14px', color: '#374151', textAlign: 'center', padding: '16px' }}>{result.caseStudyScore}</td>
+                <td style={{ fontSize: '14px', fontWeight: 700, color: '#111827', padding: '16px' }}>{Number(result.finalPercentage ?? 0).toFixed(1)}%</td>
                 <td style={{ padding: '16px' }}>
                   <span
                     style={{
@@ -137,7 +209,7 @@ const AssessmentResults = () => {
                       fontWeight: 600,
                     }}
                   >
-                    {isPass ? '✓ Pass' : '✗ Fail'}
+                      {result.result}
                   </span>
                 </td>
               </tr>
@@ -146,7 +218,6 @@ const AssessmentResults = () => {
         </tbody>
       </table>
 
-      {/* Export Button */}
       <div style={{ marginTop: '24px' }}>
         <button
           onClick={handleExportCSV}

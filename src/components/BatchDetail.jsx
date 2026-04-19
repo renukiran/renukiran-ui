@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { attendanceAPI, batchAPI, candidateAPI, courseAPI, trainerAPI } from '../services/api';
+import { assessmentAPI, attendanceAPI, batchAPI, candidateAPI, courseAPI, trainerAPI } from '../services/api';
 import { CreateBatchModal } from '../pages/BatchManagement';
 
 const ATTENDANCE_CODES = ['P', 'A', 'L'];
@@ -20,11 +20,19 @@ const getAttendanceColor = (attendance) => {
   return '#dc2626';
 };
 
-const calculateFinal = (mcq, practical, caseStudy) => {
+const calculateFinal = (mcq, practical, caseStudy, weights = { mcqWeight: 30, practicalWeight: 50, caseStudyWeight: 20 }) => {
   const mcqValue = parseFloat(mcq) || 0;
   const practicalValue = parseFloat(practical) || 0;
   const caseStudyValue = parseFloat(caseStudy) || 0;
-  return (mcqValue * 0.3 + practicalValue * 0.5 + caseStudyValue * 0.2).toFixed(1);
+  const totalWeight = (weights.mcqWeight || 0) + (weights.practicalWeight || 0) + (weights.caseStudyWeight || 0);
+
+  if (totalWeight <= 0) {
+    return '0.0';
+  }
+
+  return ((mcqValue * (weights.mcqWeight || 0)
+    + practicalValue * (weights.practicalWeight || 0)
+    + caseStudyValue * (weights.caseStudyWeight || 0)) / totalWeight).toFixed(1);
 };
 
 const formatApiDate = (date) => {
@@ -112,13 +120,29 @@ const BatchDetail = ({ batchData, onNavigate }) => {
     enrolledCount: 0,
   });
   const [expandedRemarks, setExpandedRemarks] = useState(null);
-  const [saveMessage, setSaveMessage] = useState('');
+  const [attendanceSaveMessage, setAttendanceSaveMessage] = useState('');
+  const [assessmentSaveMessage, setAssessmentSaveMessage] = useState('');
   const [publishMessage, setPublishMessage] = useState('');
+  const [assessmentCandidates, setAssessmentCandidates] = useState([]);
+  const [assessmentConfig, setAssessmentConfig] = useState({
+    batchId,
+    batchName: batchData?.batchName ?? batchData?.id ?? 'Batch',
+    courseName: batchData?.courseName ?? '',
+    mcqWeight: 30,
+    practicalWeight: 50,
+    caseStudyWeight: 20,
+    passThreshold: 50,
+    published: false,
+  });
+  const [assessmentLoading, setAssessmentLoading] = useState(false);
+  const [assessmentError, setAssessmentError] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [trainers, setTrainers] = useState([]);
   const [courses, setCourses] = useState([]);
   const [profileLoadingId, setProfileLoadingId] = useState(null);
   const [savingAttendance, setSavingAttendance] = useState(false);
+  const [savingAssessments, setSavingAssessments] = useState(false);
+  const [publishingAssessments, setPublishingAssessments] = useState(false);
 
   useEffect(() => {
     setActiveTab(batchData?.initialTab ?? 'Candidates');
@@ -300,7 +324,7 @@ const BatchDetail = ({ batchData, onNavigate }) => {
     try {
       setSavingAttendance(true);
       setAttendanceError('');
-      setSaveMessage('');
+      setAttendanceSaveMessage('');
 
       const response = await attendanceAPI.saveAttendance(batchId, request);
       const refreshedPage = await attendanceAPI.getAttendancePage(batchId, request.attendanceDate);
@@ -317,8 +341,8 @@ const BatchDetail = ({ batchData, onNavigate }) => {
         markedCount: refreshedPage?.markedCount ?? response?.markedCount ?? 0,
         enrolledCount: refreshedPage?.enrolledCount ?? response?.enrolledCount ?? refreshedRows.length,
       });
-      setSaveMessage(response?.message || 'Attendance saved successfully');
-      setTimeout(() => setSaveMessage(''), 2000);
+      setAttendanceSaveMessage(response?.message || 'Attendance saved successfully');
+      setTimeout(() => setAttendanceSaveMessage(''), 2000);
     } catch (err) {
       console.error('Failed to save attendance', err);
       setAttendanceError(err.message || 'Failed to save attendance.');
@@ -326,6 +350,68 @@ const BatchDetail = ({ batchData, onNavigate }) => {
       setSavingAttendance(false);
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (activeTab !== 'Assessments') {
+      return undefined;
+    }
+
+    if (!batchId) {
+      setAssessmentCandidates([]);
+      setAssessmentError('Batch details are not available.');
+      setAssessmentLoading(false);
+      return undefined;
+    }
+
+    const loadAssessmentPage = async () => {
+      try {
+        setAssessmentLoading(true);
+        setAssessmentError('');
+        const data = await assessmentAPI.getAssessmentEntryPage(batchId);
+        if (cancelled) return;
+
+        setAssessmentConfig({
+          batchId: data?.batchId ?? batchId,
+          batchName: data?.batchName ?? batchData?.batchName ?? batchData?.id ?? 'Batch',
+          courseName: data?.courseName ?? batchData?.courseName ?? '',
+          mcqWeight: data?.mcqWeight ?? 30,
+          practicalWeight: data?.practicalWeight ?? 50,
+          caseStudyWeight: data?.caseStudyWeight ?? 20,
+          passThreshold: data?.passThreshold ?? 50,
+          published: Boolean(data?.published),
+        });
+        setAssessmentCandidates(
+          Array.isArray(data?.candidates)
+            ? data.candidates.map((candidate) => ({
+                id: candidate.candidateId,
+                rowNumber: candidate.rowNumber,
+                name: candidate.candidateName ?? '—',
+                mcq: candidate.mcqScore ?? '',
+                practical: candidate.practicalScore ?? '',
+                caseStudy: candidate.caseStudyScore ?? '',
+                remarks: candidate.remarks ?? '',
+              }))
+            : []
+        );
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to load assessments', err);
+          setAssessmentCandidates([]);
+          setAssessmentError(err.message || 'Failed to load assessments.');
+        }
+      } finally {
+        if (!cancelled) setAssessmentLoading(false);
+      }
+    };
+
+    loadAssessmentPage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, batchId, batchData?.batchName, batchData?.courseName, batchData?.id]);
 
   const handleViewProfile = async (candidateId) => {
     try {
@@ -342,13 +428,13 @@ const BatchDetail = ({ batchData, onNavigate }) => {
   };
 
   const handleScoreChange = (id, field, value) => {
-    setCandidates((previous) => previous.map((candidate) => (
+    setAssessmentCandidates((previous) => previous.map((candidate) => (
       candidate.id === id ? { ...candidate, [field]: value } : candidate
     )));
   };
 
   const handleRemarksChange = (id, value) => {
-    setCandidates((previous) => previous.map((candidate) => (
+    setAssessmentCandidates((previous) => previous.map((candidate) => (
       candidate.id === id ? { ...candidate, remarks: value } : candidate
     )));
   };
@@ -357,36 +443,116 @@ const BatchDetail = ({ batchData, onNavigate }) => {
     setExpandedRemarks(expandedRemarks === id ? null : id);
   };
 
-  const handleSaveAssessments = () => {
-    setSaveMessage('Saved!');
-    setTimeout(() => setSaveMessage(''), 2000);
+  const handleSaveAssessments = async () => {
+    if (!batchId) {
+      setAssessmentError('Batch details are not available.');
+      return;
+    }
+
+    if (assessmentCandidates.length === 0) {
+      setAssessmentError('No candidates are assigned to this batch yet.');
+      return;
+    }
+
+    const incompleteCandidate = assessmentCandidates.find((candidate) => (
+      candidate.mcq === '' || candidate.practical === '' || candidate.caseStudy === ''
+    ));
+
+    if (incompleteCandidate) {
+      setAssessmentError('Enter scores for all candidates before saving.');
+      return;
+    }
+
+    try {
+      setSavingAssessments(true);
+      setAssessmentError('');
+      setAssessmentSaveMessage('');
+
+      const response = await assessmentAPI.saveAssessments(batchId, {
+        entries: assessmentCandidates.map((candidate) => ({
+          candidateId: candidate.id,
+          mcqScore: Number(candidate.mcq),
+          practicalScore: Number(candidate.practical),
+          caseStudyScore: Number(candidate.caseStudy),
+          remarks: candidate.remarks || '',
+        })),
+      });
+
+      setAssessmentSaveMessage(response?.message || 'Assessments saved successfully');
+      setTimeout(() => setAssessmentSaveMessage(''), 2000);
+    } catch (err) {
+      console.error('Failed to save assessments', err);
+      setAssessmentError(err.message || 'Failed to save assessments.');
+    } finally {
+      setSavingAssessments(false);
+    }
   };
 
-  const handlePublishResults = () => {
-    setPublishMessage('Results published successfully!');
-    setTimeout(() => setPublishMessage(''), 2000);
+  const handlePublishResults = async () => {
+    if (!batchId) {
+      setAssessmentError('Batch details are not available.');
+      return;
+    }
+
+    try {
+      setPublishingAssessments(true);
+      setAssessmentError('');
+      setPublishMessage('');
+
+      const response = await assessmentAPI.publishAssessments(batchId);
+      setAssessmentConfig((previous) => ({ ...previous, published: Boolean(response?.published) }));
+      setPublishMessage(response?.message || 'Assessment results published successfully');
+      setTimeout(() => setPublishMessage(''), 2000);
+    } catch (err) {
+      console.error('Failed to publish assessment results', err);
+      setAssessmentError(err.message || 'Failed to publish assessment results.');
+    } finally {
+      setPublishingAssessments(false);
+    }
+  };
+
+  const handleViewResults = () => {
+    if (!onNavigate || !batchId) {
+      return;
+    }
+
+    onNavigate('AssessmentResults', {
+      batchId,
+      batchData: {
+        ...batchData,
+        initialTab: 'Assessments',
+      },
+    });
   };
 
   const calculateAssessmentStats = () => {
     let passCount = 0;
     let failCount = 0;
 
-    candidates.forEach((candidate) => {
-      const finalScore = parseFloat(calculateFinal(candidate.mcq, candidate.practical, candidate.caseStudy));
-      if (finalScore >= 50) passCount += 1;
+    assessmentCandidates.forEach((candidate) => {
+      const hasScores = candidate.mcq !== '' && candidate.practical !== '' && candidate.caseStudy !== '';
+      if (!hasScores) {
+        return;
+      }
+
+      const finalScore = parseFloat(calculateFinal(candidate.mcq, candidate.practical, candidate.caseStudy, assessmentConfig));
+      if (finalScore >= (assessmentConfig.passThreshold || 50)) passCount += 1;
       else failCount += 1;
     });
 
-    const passRate = candidates.length > 0 ? ((passCount / candidates.length) * 100).toFixed(1) : 0;
+    const assessedCount = assessmentCandidates.filter((candidate) => candidate.mcq !== '' && candidate.practical !== '' && candidate.caseStudy !== '').length;
+    const passRate = assessedCount > 0 ? ((passCount / assessedCount) * 100).toFixed(1) : 0;
     return { passCount, failCount, passRate };
   };
 
   const markedCount = attendanceRows.filter((candidate) => attendance[candidate.id]).length;
   const enrolledCount = attendanceMeta.enrolledCount || attendanceRows.length;
   const assessmentStats = calculateAssessmentStats();
-  const pageTitle = batchData?.courseName
-    ? `${batchData.courseName} — ${batchData?.batchName ?? batchData?.id ?? 'Batch'}`
-    : batchData?.batchName ?? batchData?.id ?? 'Batch';
+  const resolvedCourseName = assessmentConfig?.courseName || batchData?.courseName || '';
+  const resolvedBatchName = assessmentConfig?.batchName || batchData?.batchName || batchData?.id || 'Batch';
+  const pageTitle = resolvedCourseName
+    ? `${resolvedCourseName} — ${resolvedBatchName}`
+    : resolvedBatchName;
 
   return (
     <div style={{ background: '#ffffff', padding: '28px 36px', minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
@@ -403,28 +569,24 @@ const BatchDetail = ({ batchData, onNavigate }) => {
       </div>
 
       <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
-        {['Candidates', 'Attendance', 'Assessments'].map((tab) => {
-          const isDisabled = tab === 'Assessments';
-          return (
-            <button
-              key={tab}
-              onClick={() => !isDisabled && setActiveTab(tab)}
-              disabled={isDisabled}
-              style={{
-                padding: '12px 16px',
-                fontSize: '14px',
-                cursor: isDisabled ? 'not-allowed' : 'pointer',
-                border: 'none',
-                background: 'none',
-                color: isDisabled ? '#d1d5db' : activeTab === tab ? '#2563eb' : '#6b7280',
-                borderBottom: activeTab === tab && !isDisabled ? '2px solid #2563eb' : 'none',
-                fontWeight: activeTab === tab && !isDisabled ? 600 : 400,
-              }}
-            >
-              {tab}
-            </button>
-          );
-        })}
+        {['Candidates', 'Attendance', 'Assessments'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '12px 16px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              border: 'none',
+              background: 'none',
+              color: activeTab === tab ? '#2563eb' : '#6b7280',
+              borderBottom: activeTab === tab ? '2px solid #2563eb' : 'none',
+              fontWeight: activeTab === tab ? 600 : 400,
+            }}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {activeTab === 'Candidates' && (
@@ -723,9 +885,9 @@ const BatchDetail = ({ batchData, onNavigate }) => {
                   >
                     {savingAttendance ? 'Saving...' : 'Save Attendance'}
                   </button>
-                  {saveMessage && (
+                  {attendanceSaveMessage && (
                     <span style={{ fontSize: '13px', color: '#16a34a', fontWeight: 600 }}>
-                      {saveMessage}
+                      {attendanceSaveMessage}
                     </span>
                   )}
                 </div>
@@ -737,6 +899,12 @@ const BatchDetail = ({ batchData, onNavigate }) => {
 
       {activeTab === 'Assessments' && (
         <>
+          {assessmentError && (
+            <div style={{ marginBottom: '16px', padding: '12px 14px', borderRadius: '8px', background: '#fef2f2', color: '#b91c1c', fontSize: '14px' }}>
+              {assessmentError}
+            </div>
+          )}
+
           <div
             style={{
               background: '#eff6ff',
@@ -751,156 +919,171 @@ const BatchDetail = ({ batchData, onNavigate }) => {
           >
             <span style={{ color: '#2563eb', fontSize: '16px' }}>i</span>
             <span style={{ fontSize: '13px', color: '#374151' }}>
-              Course Weights: MCQ (30%) | Practical (50%) | Case Study (20%) | Pass Threshold: 50%
+              Course Weights: MCQ ({assessmentConfig.mcqWeight}%) | Practical ({assessmentConfig.practicalWeight}%) | Case Study ({assessmentConfig.caseStudyWeight}%) | Pass Threshold: {assessmentConfig.passThreshold}%
             </span>
+            {assessmentConfig.published && (
+              <span style={{ marginLeft: 'auto', background: '#dcfce7', color: '#166534', borderRadius: '999px', padding: '4px 12px', fontSize: '12px', fontWeight: 700 }}>
+                Published
+              </span>
+            )}
           </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
-            <thead>
-              <tr>
-                {['#', 'NAME', 'MCQ / 100', 'PRACTICAL / 100', 'CASE STUDY / 100', 'FINAL %', 'RESULT', 'REMARKS'].map((header) => (
-                  <th
-                    key={header}
-                    style={{
-                      fontSize: '11px',
-                      color: '#9ca3af',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      padding: '10px 16px',
-                      textAlign: 'left',
-                      fontWeight: 600,
-                      borderBottom: '1px solid #e5e7eb',
-                    }}
-                  >
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {candidates.map((candidate, index) => {
-                const final = parseFloat(calculateFinal(candidate.mcq, candidate.practical, candidate.caseStudy));
-                const isPass = final >= 50;
-                const isExpanded = expandedRemarks === candidate.id;
+          {assessmentLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280', fontSize: '14px' }}>Loading assessments...</div>
+          ) : assessmentCandidates.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: '14px' }}>No assessment candidates found.</div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+              <thead>
+                <tr>
+                  {['#', 'NAME', 'MCQ / 100', 'PRACTICAL / 100', 'CASE STUDY / 100', 'FINAL %', 'RESULT', 'REMARKS'].map((header) => (
+                    <th
+                      key={header}
+                      style={{
+                        fontSize: '11px',
+                        color: '#9ca3af',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        padding: '10px 16px',
+                        textAlign: 'left',
+                        fontWeight: 600,
+                        borderBottom: '1px solid #e5e7eb',
+                      }}
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {assessmentCandidates.map((candidate, index) => {
+                  const hasScores = candidate.mcq !== '' && candidate.practical !== '' && candidate.caseStudy !== '';
+                  const final = hasScores
+                    ? parseFloat(calculateFinal(candidate.mcq, candidate.practical, candidate.caseStudy, assessmentConfig))
+                    : null;
+                  const isPass = final != null && final >= (assessmentConfig.passThreshold || 50);
+                  const isExpanded = expandedRemarks === candidate.id;
+                  const resultLabel = final == null ? 'Pending' : isPass ? 'Pass' : 'Fail';
 
-                return (
-                  <React.Fragment key={candidate.id}>
-                    <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ fontSize: '14px', color: '#6b7280', padding: '16px' }}>{index + 1}</td>
-                      <td style={{ fontSize: '14px', fontWeight: 500, color: '#111827', padding: '16px' }}>{candidate.name}</td>
-                      <td style={{ padding: '16px' }}>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={candidate.mcq}
-                          onChange={(event) => handleScoreChange(candidate.id, 'mcq', event.target.value)}
-                          style={{
-                            width: '70px',
-                            padding: '8px 10px',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            textAlign: 'center',
-                          }}
-                        />
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={candidate.practical}
-                          onChange={(event) => handleScoreChange(candidate.id, 'practical', event.target.value)}
-                          style={{
-                            width: '70px',
-                            padding: '8px 10px',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            textAlign: 'center',
-                          }}
-                        />
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={candidate.caseStudy}
-                          onChange={(event) => handleScoreChange(candidate.id, 'caseStudy', event.target.value)}
-                          style={{
-                            width: '70px',
-                            padding: '8px 10px',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            textAlign: 'center',
-                          }}
-                        />
-                      </td>
-                      <td style={{ fontSize: '14px', fontWeight: 700, color: '#111827', padding: '16px' }}>
-                        {final.toFixed(1)}%
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <span
-                          style={{
-                            background: isPass ? '#dcfce7' : '#fee2e2',
-                            color: isPass ? '#166534' : '#b91c1c',
-                            borderRadius: '12px',
-                            padding: '4px 12px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {isPass ? 'Pass' : 'Fail'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <button
-                          onClick={() => toggleRemarks(candidate.id)}
-                          style={{
-                            color: '#2563eb',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                          }}
-                        >
-                          Remarks {isExpanded ? '▼' : ''}
-                        </button>
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr style={{ borderBottom: '1px solid #f3f4f6', background: '#f9fafb' }}>
-                        <td colSpan="8" style={{ padding: '16px' }}>
-                          <div>
-                            <label style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px', fontWeight: 600 }}>
-                              REMARKS FOR {candidate.name.toUpperCase()}
-                            </label>
-                            <textarea
-                              value={candidate.remarks}
-                              onChange={(event) => handleRemarksChange(candidate.id, event.target.value)}
-                              style={{
-                                width: '500px',
-                                height: '80px',
-                                padding: '10px',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '6px',
-                                fontSize: '13px',
-                                fontFamily: "'Segoe UI', system-ui, sans-serif",
-                              }}
-                            />
-                          </div>
+                  return (
+                    <React.Fragment key={candidate.id}>
+                      <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ fontSize: '14px', color: '#6b7280', padding: '16px' }}>{candidate.rowNumber ?? index + 1}</td>
+                        <td style={{ fontSize: '14px', fontWeight: 500, color: '#111827', padding: '16px' }}>{candidate.name}</td>
+                        <td style={{ padding: '16px' }}>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={candidate.mcq}
+                            onChange={(event) => handleScoreChange(candidate.id, 'mcq', event.target.value)}
+                            style={{
+                              width: '70px',
+                              padding: '8px 10px',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              textAlign: 'center',
+                            }}
+                          />
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={candidate.practical}
+                            onChange={(event) => handleScoreChange(candidate.id, 'practical', event.target.value)}
+                            style={{
+                              width: '70px',
+                              padding: '8px 10px',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              textAlign: 'center',
+                            }}
+                          />
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={candidate.caseStudy}
+                            onChange={(event) => handleScoreChange(candidate.id, 'caseStudy', event.target.value)}
+                            style={{
+                              width: '70px',
+                              padding: '8px 10px',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              textAlign: 'center',
+                            }}
+                          />
+                        </td>
+                        <td style={{ fontSize: '14px', fontWeight: 700, color: '#111827', padding: '16px' }}>
+                          {final == null ? '—' : `${final.toFixed(1)}%`}
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <span
+                            style={{
+                              background: resultLabel === 'Pending' ? '#f3f4f6' : isPass ? '#dcfce7' : '#fee2e2',
+                              color: resultLabel === 'Pending' ? '#6b7280' : isPass ? '#166534' : '#b91c1c',
+                              borderRadius: '12px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {resultLabel}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <button
+                            onClick={() => toggleRemarks(candidate.id)}
+                            style={{
+                              color: '#2563eb',
+                              fontSize: '13px',
+                              cursor: 'pointer',
+                              background: 'none',
+                              border: 'none',
+                              padding: 0,
+                            }}
+                          >
+                            Remarks {isExpanded ? '▼' : ''}
+                          </button>
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                      {isExpanded && (
+                        <tr style={{ borderBottom: '1px solid #f3f4f6', background: '#f9fafb' }}>
+                          <td colSpan="8" style={{ padding: '16px' }}>
+                            <div>
+                              <label style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px', fontWeight: 600 }}>
+                                REMARKS FOR {candidate.name.toUpperCase()}
+                              </label>
+                              <textarea
+                                value={candidate.remarks}
+                                onChange={(event) => handleRemarksChange(candidate.id, event.target.value)}
+                                style={{
+                                  width: '500px',
+                                  height: '80px',
+                                  padding: '10px',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  fontFamily: "'Segoe UI', system-ui, sans-serif",
+                                }}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
 
           <div
             style={{
@@ -920,6 +1103,7 @@ const BatchDetail = ({ batchData, onNavigate }) => {
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <button
                 onClick={handleSaveAssessments}
+                disabled={savingAssessments || assessmentLoading || assessmentCandidates.length === 0}
                 style={{
                   border: '1px solid #e5e7eb',
                   background: '#fff',
@@ -927,13 +1111,15 @@ const BatchDetail = ({ batchData, onNavigate }) => {
                   borderRadius: '8px',
                   padding: '10px 20px',
                   fontSize: '14px',
-                  cursor: 'pointer',
+                  cursor: savingAssessments ? 'not-allowed' : 'pointer',
+                  opacity: savingAssessments ? 0.7 : 1,
                 }}
               >
-                Save Assessments
+                {savingAssessments ? 'Saving...' : 'Save Assessments'}
               </button>
               <button
                 onClick={handlePublishResults}
+                disabled={publishingAssessments || assessmentLoading || assessmentCandidates.length === 0}
                 style={{
                   background: '#1e3a5f',
                   color: 'white',
@@ -941,15 +1127,32 @@ const BatchDetail = ({ batchData, onNavigate }) => {
                   padding: '10px 20px',
                   fontSize: '14px',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: publishingAssessments ? 'not-allowed' : 'pointer',
                   border: 'none',
+                  opacity: publishingAssessments ? 0.7 : 1,
                 }}
               >
-                Publish Results
+                {publishingAssessments ? 'Publishing...' : 'Publish Results'}
               </button>
-              {saveMessage && (
+              <button
+                onClick={handleViewResults}
+                disabled={assessmentLoading || assessmentCandidates.length === 0}
+                style={{
+                  border: '1px solid #2563eb',
+                  background: '#fff',
+                  color: '#2563eb',
+                  borderRadius: '8px',
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                View Results
+              </button>
+              {assessmentSaveMessage && (
                 <span style={{ fontSize: '13px', color: '#16a34a', fontWeight: 600 }}>
-                  {saveMessage}
+                  {assessmentSaveMessage}
                 </span>
               )}
             </div>

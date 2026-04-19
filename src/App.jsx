@@ -13,6 +13,7 @@ import UserManagement from './pages/UserManagement';
 import Placements from './pages/Placements';
 import PlacementDetail from './pages/PlacementDetail';
 import Notifications from './pages/Notifications';
+import AssessmentResults from './components/AssessmentResults';
 import { notificationAPI } from './services/api';
 
 const App = () => {
@@ -75,6 +76,8 @@ const App = () => {
         return <Placements onNavigate={handleNavigate} />;
       case 'PlacementDetail':
         return <PlacementDetail placement={pageData} onNavigate={handleNavigate} />;
+      case 'AssessmentResults':
+        return <AssessmentResults resultData={pageData} onNavigate={handleNavigate} />;
       case 'Notifications':
         return <Notifications onCountChange={setNotificationCount} />;
       default:

@@ -126,6 +126,14 @@ export const attendanceAPI = {
   saveAttendance: (batchId, data) => apiCall(`/api/v1/batches/${batchId}/attendance`, 'POST', data),
 };
 
+// Assessment endpoints — backend: /api/v1/batches/{batchId}/assessments
+export const assessmentAPI = {
+  getAssessmentEntryPage: (batchId) => apiCall(`/api/v1/batches/${batchId}/assessments`, 'GET'),
+  getAssessmentResultsPage: (batchId) => apiCall(`/api/v1/batches/${batchId}/assessments/results`, 'GET'),
+  saveAssessments: (batchId, data) => apiCall(`/api/v1/batches/${batchId}/assessments`, 'POST', data),
+  publishAssessments: (batchId) => apiCall(`/api/v1/batches/${batchId}/assessments/publish`, 'POST'),
+};
+
 // Dashboard endpoints — backend: /api/v1/dashboard
 export const dashboardAPI = {
   getAdminStats: () => apiCall('/api/v1/dashboard/admin-stats', 'GET'),

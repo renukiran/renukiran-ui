@@ -13,7 +13,7 @@ const OC_NAV = [
   { name: 'Dashboard', label: 'Dashboard', icon: Home },
   { name: 'CandidateList', label: 'Candidates', icon: FileText },
   { name: 'BatchManagement', label: 'Batches', icon: Users },
-  { name: 'Placements', label: 'Placements', icon: Bookmark, disabled: true },
+  { name: 'Placements', label: 'Placements', icon: Bookmark },
   { name: 'Notifications', label: 'Notifications', icon: Bell },
 ];
 

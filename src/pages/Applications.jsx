@@ -107,7 +107,7 @@ const Applications = ({ onNavigate }) => {
       'Secondary': 'SECONDARY',
       'Higher Secondary': 'HIGHER_SECONDARY',
       'Graduate': 'GRADUATE',
-      'Other': 'OTHER',
+      'Other': 'OTHERS',
     };
 
     const stitchingMap = {
@@ -119,7 +119,7 @@ const Applications = ({ onNavigate }) => {
 
     const migrationMap = {
       'Will stay long-term': 'STAY_LONG_TERM',
-      'Maybe will move': 'MAYBE_WILL_MOVE',
+      'Maybe will move': 'MAY_BE_WILL_MOVE',
       'Likely to move': 'LIKELY_TO_MOVE',
       'Does not know': 'DOES_NOT_KNOW',
     };
@@ -134,12 +134,12 @@ const Applications = ({ onNavigate }) => {
     const housingMap = {
       'Rented': 'RENTED',
       'Own (Pucca)': 'OWN_PUCCA',
-      'Own (Kutcha)': 'OWN_KUTCHA',
+      'Own (Kutcha)': 'OWN_KUCHA',
     };
 
     const motivationMap = {
       'Want income immediately': 'WANT_INCOME_IMMEDIATELY',
-      'Want to support family': 'WANT_TO_SUPPORT_FAMILY',
+      'Want to support family': 'WANT_SUPPORT_FAMILY',
       'Want to learn market-demand skills': 'WANT_TO_LEARN_MARKET_DEMAND_SKILLS',
       'Want home-based work': 'WANT_HOME_BASED_WORK',
       'Want to start micro-enterprise': 'WANT_TO_START_MICRO_ENTERPRISE',
@@ -202,7 +202,7 @@ const Applications = ({ onNavigate }) => {
       distanceTrainingCenter: data.distanceToTrainingCentre || '',
       motivationForJoiningTraining: primaryMotivation,
       motivationForJoiningTrainingDetailsOthersReason: '',
-      ecoSituExtremeLowIncome: economicSituation.includes('Extremely low income') ? 'EXTREME_LOW_INCOME' : 'NO',
+      ecoSituExtremeLowIncome: economicSituation.includes('Extremely low income') ? 'EXTREME_LOW_INCOME' : null,
       ecoSituSingleMotherOrWidow: economicSituation.includes('Single mother / widow') ? 'YES' : 'NO',
       ecoSituNoStableIncome: economicSituation.includes('No stable income') ? 'YES' : 'NO',
       ecoSituHighFinancialStress: economicSituation.includes('High financial stress') ? 'YES' : 'NO',

@@ -418,6 +418,8 @@ const BatchManagement = ({ onNavigate }) => {
           course: saved.courseName || '',
           trainer: saved.trainerName || '',
           dates: formatDateRange(saved.startDate, saved.endDate),
+          startDate: saved.startDate || batch.startDate,
+          endDate: saved.endDate || batch.endDate,
           enrolled: 0,
           max: saved.capacity || batch.capacity,
           status: saved.status || computeBatchStatus(saved.startDate, saved.endDate),
