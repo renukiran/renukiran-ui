@@ -353,6 +353,8 @@ const BatchManagement = ({ onNavigate }) => {
   const [statusFilter, setStatusFilter] = useState('Status: All');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const fetchBatches = async () => {
@@ -439,6 +441,36 @@ const BatchManagement = ({ onNavigate }) => {
     return matchSearch && matchCourse && matchStatus;
   });
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const paginatedBatches = filtered.slice(startIdx, startIdx + itemsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const getPaginationButtons = () => {
+    const buttons = [];
+    const maxButtons = 7;
+
+    if (totalPages <= maxButtons) {
+      for (let i = 1; i <= totalPages; i++) {
+        buttons.push(i);
+      }
+    } else {
+      buttons.push(1);
+      if (currentPage > 3) buttons.push('...');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        if (!buttons.includes(i)) buttons.push(i);
+      }
+      if (currentPage < totalPages - 2) buttons.push('...');
+      buttons.push(totalPages);
+    }
+    return buttons;
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -501,12 +533,12 @@ const BatchManagement = ({ onNavigate }) => {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {paginatedBatches.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-10 text-gray-400 text-sm">No batches found.</td>
                 </tr>
               ) : (
-                filtered.map((b) => {
+                paginatedBatches.map((b) => {
                   const pct = Math.round((b.enrolled / b.max) * 100);
                   return (
                     <tr
@@ -540,20 +572,48 @@ const BatchManagement = ({ onNavigate }) => {
 
           {/* Pagination */}
           <div className="flex items-center justify-between px-4 py-3.5 border-t border-gray-100">
-            <span className="text-xs text-gray-500">Showing 1–{filtered.length} of {batches.length}</span>
+            <span className="text-xs text-gray-500">
+              Showing {filtered.length === 0 ? 0 : startIdx + 1}–{Math.min(startIdx + itemsPerPage, filtered.length)} of {filtered.length}
+            </span>
             <div className="flex gap-1">
-              {['«', '‹', '1', '2', '3', '›', '»'].map((p, i) => (
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`w-8 h-8 flex items-center justify-center text-xs border rounded-md transition ${
+                  currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                ‹
+              </button>
+              {getPaginationButtons().map((page, idx) => (
                 <button
-                  key={i}
+                  key={idx}
+                  onClick={() => typeof page === 'number' && handlePageChange(page)}
+                  disabled={page === '...'}
                   className={`w-8 h-8 flex items-center justify-center text-xs border rounded-md transition ${
-                    p === '1'
+                    currentPage === page
                       ? 'bg-blue-700 text-white border-blue-700'
+                      : page === '...'
+                      ? 'bg-white text-gray-400 border-gray-200 cursor-default'
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  {p}
+                  {page}
                 </button>
               ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className={`w-8 h-8 flex items-center justify-center text-xs border rounded-md transition ${
+                  currentPage === totalPages || totalPages === 0
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                ›
+              </button>
             </div>
           </div>
         </div>

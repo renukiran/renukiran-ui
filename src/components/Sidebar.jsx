@@ -5,6 +5,7 @@ const ADMIN_NAV = [
   { name: 'Dashboard', label: 'Dashboard', icon: LayoutGrid },
   { name: 'Courses', label: 'Courses', icon: BookOpen },
   { name: 'BatchManagement', label: 'Batches', icon: Users },
+  { name: 'CandidateList', label: 'Candidates', icon: FileText },
   { name: 'UserManagement', label: 'Users', icon: UserCog },
   { name: 'Notifications', label: 'Notifications', icon: Bell },
 ];
@@ -13,7 +14,7 @@ const OC_NAV = [
   { name: 'Dashboard', label: 'Dashboard', icon: Home },
   { name: 'CandidateList', label: 'Candidates', icon: FileText },
   { name: 'BatchManagement', label: 'Batches', icon: Users },
-  { name: 'Placements', label: 'Placements', icon: Bookmark },
+  { name: 'Placements', label: 'Placements', icon: Bookmark, disabled: true },
   { name: 'Notifications', label: 'Notifications', icon: Bell },
 ];
 

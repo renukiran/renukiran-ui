@@ -572,16 +572,18 @@ const BatchDetail = ({ batchData, onNavigate }) => {
         {['Candidates', 'Attendance', 'Assessments'].map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => tab !== 'Assessments' && setActiveTab(tab)}
+            disabled={tab === 'Assessments'}
             style={{
               padding: '12px 16px',
               fontSize: '14px',
-              cursor: 'pointer',
+              cursor: tab === 'Assessments' ? 'not-allowed' : 'pointer',
               border: 'none',
               background: 'none',
-              color: activeTab === tab ? '#2563eb' : '#6b7280',
+              color: tab === 'Assessments' ? '#d1d5db' : activeTab === tab ? '#2563eb' : '#6b7280',
               borderBottom: activeTab === tab ? '2px solid #2563eb' : 'none',
               fontWeight: activeTab === tab ? 600 : 400,
+              opacity: tab === 'Assessments' ? 0.5 : 1,
             }}
           >
             {tab}

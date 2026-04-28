@@ -21,37 +21,6 @@ const MIGRATION_MAP = { STAY_LONG_TERM: 'Will stay long-term', MAYBE_WILL_MOVE: 
 const HOUSING_MAP = { RENTED: 'Rented', OWN_PUCCA: 'Own (Pucca)', OWN_KUTCHA: 'Own (Kutcha)' };
 const TRACK_MAP = { TAILORING: 'Tailoring', BEAUTY_AND_GROOMING: 'Beauty & Grooming', FOOD_BUSINESS: 'Food Business', HANDICRAFT: 'Handicraft', HOME_BASED_PRODUCTION: 'Home-Based Production', OTHER: 'Other' };
 const MOTIVATION_MAP = { WANT_INCOME_IMMEDIATELY: 'Want income immediately', WANT_TO_SUPPORT_FAMILY: 'Want to support family', WANT_TO_LEARN_MARKET_DEMAND_SKILLS: 'Want to learn market-demand skills', WANT_HOME_BASED_WORK: 'Want home-based work', WANT_TO_START_MICRO_ENTERPRISE: 'Want to start micro-enterprise', WANT_TO_JOIN_SHG_AFTER_PROGRAM: 'Want to join SHG after program', OTHER: 'Other' };
-const STEPS = ['New', 'Under Review', 'Selected', 'Assigned', 'Training', 'Completed', 'Placed'];
-const ACTIVE_STEP_INDEX = 3;
-
-const PERSONAL_INFO = {
-  batch: 'Batch 1',
-  fullName: 'Priya Sharma',
-  age: '24',
-  fatherName: 'Ram Sharma',
-  mobile: '9876543210',
-  alternateNumber: '9876543211',
-  address: 'Tilpat, Faridabad, HR-121003',
-  aadhaar: '4321 5678 1234',
-  bankAccount: 'Yes',
-  localResident: 'Yes',
-  caste: 'OBC',
-};
-
-const BATCH_INFO = {
-  batch: 'Stitching B1',
-  trainer: 'Suman K.',
-  period: 'Mar 1 – Jun 30',
-  attendance: '93%',
-};
-
-const STATUS_HISTORY = [
-  { date: 'Mar 13, 2026', status: 'Assigned to Batch B1', by: 'by Rekha P.' },
-  { date: 'Mar 12, 2026', status: 'Selected', by: 'by Vinay A.' },
-  { date: 'Mar 11, 2026', status: 'Under Review', by: 'by Vinay A.' },
-  { date: 'Mar 10, 2026', status: 'New Application', by: 'by Rekha P.' },
-];
-
 const TABS = ['Personal', 'Household', 'Education', 'Training', 'Need Assessment'];
 
 const PlaceholderPage = ({ title, onBack }) => (
@@ -80,58 +49,13 @@ const PlaceholderPage = ({ title, onBack }) => (
   </div>
 );
 
-const StepperCircle = ({ step, index, isCompleted, isActive }) => {
-  let bgColor = '#fff';
-  let borderColor = '#d1d5db';
-  let textColor = '#9ca3af';
-  let content = '';
-
-  if (isCompleted) {
-    bgColor = '#16a34a';
-    borderColor = '#16a34a';
-    textColor = '#16a34a';
-    content = '✓';
-  } else if (isActive) {
-    bgColor = '#1e3a5f';
-    borderColor = '#1e3a5f';
-    textColor = '#1e3a5f';
-    content = '●';
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-      <div
-        style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: '50%',
-          background: bgColor,
-          border: `2px solid ${borderColor}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontSize: '16px',
-          fontWeight: 700,
-          marginBottom: '8px',
-        }}
-      >
-        {content}
-      </div>
-      <span style={{ fontSize: '12px', color: textColor, fontWeight: isActive ? 700 : 600, textAlign: 'center' }}>
-        {step}
-      </span>
-    </div>
-  );
-};
-
 const CandidateProfile = ({ candidateData, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('Personal');
   const [showAadhaar, setShowAadhaar] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState('profile');
 
   const candidateName = candidateData?.fullName || candidateData?.name || 'Candidate';
+  const admissions = candidateData?.admissions || [];
 
   if (currentPage === 'editCandidate') {
     return <PlaceholderPage title="Edit Candidate" onBack={() => setCurrentPage('profile')} />;
@@ -449,63 +373,68 @@ const CandidateProfile = ({ candidateData, onNavigate }) => {
       </div>
 
       {/* Batch Assignment Card */}
-      <div style={{ background: '#eff6ff', borderRadius: '10px', padding: '20px 24px', marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e40af', marginBottom: '16px', margin: 0 }}>Batch Assignment</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
-          <div>
-            <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-              Batch
-            </label>
-            <button
-              // onClick={() => setCurrentPage('batchDetail')}
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#2563eb',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                textAlign: 'left',
-              }}
-            >
-              {BATCH_INFO.batch}
-            </button>
-          </div>
-          <div>
-            <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-              Trainer
-            </label>
-            <button
-              // onClick={() => setCurrentPage('trainerProfile')}
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#2563eb',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                textAlign: 'left',
-              }}
-            >
-              {BATCH_INFO.trainer}
-            </button>
-          </div>
-          <div>
-            <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-              Period
-            </label>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>{BATCH_INFO.period}</div>
-          </div>
-          <div>
-            <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-              Attendance
-            </label>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#16a34a' }}>{BATCH_INFO.attendance}</div>
-          </div>
+      {admissions.length > 0 && (
+        <div style={{ background: '#eff6ff', borderRadius: '10px', padding: '20px 24px', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e40af', marginBottom: '16px', margin: '0 0 16px 0' }}>Batch Assignment</h3>
+          {admissions.map((admission, idx) => {
+            const batch = admission?.batch;
+            const course = batch?.course;
+            const trainer = batch?.trainer;
+            return (
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '24px', marginBottom: idx < admissions.length - 1 ? '20px' : '0', paddingBottom: idx < admissions.length - 1 ? '20px' : '0', borderBottom: idx < admissions.length - 1 ? '1px solid #bfdbfe' : 'none' }}>
+                <div>
+                  <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                    Batch
+                  </label>
+                  <button
+                    onClick={() => onNavigate && onNavigate('BatchDetail', batch)}
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#2563eb',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      textAlign: 'left',
+                    }}
+                  >
+                    {batch?.batchName || '—'}
+                  </button>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                    Trainer
+                  </label>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
+                    {trainer?.firstName || trainer?.username || course?.instructor || '—'}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                    Period
+                  </label>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
+                    {batch?.startDate || '—'} – {batch?.endDate || '—'}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                    Status
+                  </label>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#16a34a' }}>{admission?.status || '—'}</div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                    Attendance
+                  </label>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#16a34a' }}>{admission?.attendance || '—'}</div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
 
       {/* Status History */}
       {/* <div style={{ background: '#fff', borderRadius: '10px', padding: '24px', marginBottom: '20px' }}>

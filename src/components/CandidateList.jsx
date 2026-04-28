@@ -27,24 +27,20 @@ const formatDate = (dateStr) => {
 
 const STATUS_BADGE_STYLES = {
   New: { background: '#dbeafe', color: '#1d4ed8' },
-  'Under Review': { background: '#fef3c7', color: '#92400e' },
-  Assigned: { background: '#dcfce7', color: '#166534' },
-  Training: { background: '#ccfbf1', color: '#0f766e' },
-  Placed: { background: '#d1fae5', color: '#065f46' },
-  Draft: { background: '#f3f4f6', color: '#6b7280' },
-  Selected: { background: '#cffafe', color: '#0e7490' },
-  'Not Placed': { background: '#fee2e2', color: '#b91c1c' },
+  TRAINING_COMPLETED: { background: '#d1fae5', color: '#065f46' },
+  ASSIGNED_TO_BATCH: { background: '#dcfce7', color: '#166534' },
+  TRAINING_STARTED: { background: '#ccfbf1', color: '#0f766e' },
 };
 
-const STATUS_OPTIONS = ['All Status', 'New', 'Under Review', 'Assigned', 'Training', 'Placed', 'Draft', 'Selected', 'Not Placed'];
-const COURSE_OPTIONS = ['All Courses', 'Stitching', 'Computers', 'Beauty', 'Handicraft', 'Food Enterprise', 'Bag Making'];
+const STATUS_OPTIONS = ['All Status', 'New', 'ASSIGNED_TO_BATCH', 'TRAINING_STARTED', 'TRAINING_COMPLETED'];
 
-const CandidateList = ({ onNavigate }) => {
+const CandidateList = ({ onNavigate, filterData }) => {
   const [candidates, setCandidates] = useState([]);
+  const [courseOptions, setCourseOptions] = useState(['All Courses']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [selectedStatus, setSelectedStatus] = useState(filterData?.status || 'All Status');
   const [selectedCourse, setSelectedCourse] = useState('All Courses');
   const [currentPage, setCurrentPage] = useState(1);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -62,18 +58,30 @@ const CandidateList = ({ onNavigate }) => {
         setError(null);
         const res = await applicationAPI.getApplications();
         const list = Array.isArray(res) ? res : res?.data ?? [];
-        const mapped = list.map((a, idx) => ({
-          id: a.id,
-          initials: getInitials(a.fullName),
-          name: a.fullName ?? '—',
-          phone: a.mobileNumber ?? '—',
-          course: TRACK_LABELS[a.preferredExperienceTrack] ?? a.preferredExperienceTrack ?? '—',
-          status: a.applicationStatus ?? 'New',
-          date: formatDate(a.createdDate),
-          avatarColor: getAvatarColor(idx),
-          raw: a,
-        }));
+        const mapped = [];
+        let colorIdx = 0;
+        list.forEach((a) => {
+          const admissions = Array.isArray(a.admissions) && a.admissions.length > 0 ? a.admissions : [null];
+          admissions.forEach((admission) => {
+            const batchCourse = admission?.batch?.course?.courseName || admission?.batch?.courseName;
+            mapped.push({
+              id: admission?.id ?? a.id,
+              candidateId: a.id,
+              initials: getInitials(a.fullName),
+              name: a.fullName ?? '—',
+              phone: a.mobileNumber ?? '—',
+              course: batchCourse || TRACK_LABELS[a.preferredExperienceTrack] || a.preferredExperienceTrack || '—',
+              status: admission ? (admission.status ?? 'New') : 'New',
+              date: formatDate(admission?.createdDate ?? a.createdDate),
+              avatarColor: getAvatarColor(colorIdx++),
+              raw: a,
+              admission: admission,
+            });
+          });
+        });
         setCandidates(mapped);
+        const uniqueCourses = ['All Courses', ...new Set(mapped.map(c => c.course).filter(c => c !== '—'))];
+        setCourseOptions(uniqueCourses);
       } catch (err) {
         setError('Failed to load candidates.');
         console.error(err);
@@ -243,7 +251,7 @@ const CandidateList = ({ onNavigate }) => {
             paddingRight: '32px',
           }}
         >
-          {COURSE_OPTIONS.map((course) => (
+          {courseOptions.map((course) => (
             <option key={course} value={course}>
               {course}
             </option>
@@ -421,8 +429,8 @@ const CandidateList = ({ onNavigate }) => {
                   style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
                 >
                   <option value="">Select candidate...</option>
-                  {candidates.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                  {Array.from(new Map(candidates.map(c => [c.candidateId, c])).values()).map(c => (
+                    <option key={c.candidateId} value={c.candidateId}>{c.name}</option>
                   ))}
                 </select>
               </div>

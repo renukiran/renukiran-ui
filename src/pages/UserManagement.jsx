@@ -358,7 +358,7 @@ const UserFormModal = ({ role, onClose, onSave }) => {
   );
 };
 
-const UserManagement = () => {
+const UserManagement = ({ pageData }) => {
   const [users, setUsers] = useState([
     { id: 1, initials: 'VA', name: 'Vinay Adalath', email: 'vinay@rwf.org', role: 'ADMIN', active: true },
     { id: 2, initials: 'SK', name: 'Suman Kumar', email: 'suman@rwf.org', role: 'TRAINER', active: true },
@@ -404,7 +404,13 @@ const UserManagement = () => {
       }
     };
     fetchUsers();
-  }, []);
+
+    if (pageData?.openModal === 'OC') {
+      setShowOCModal(true);
+    } else if (pageData?.openModal === 'Trainer') {
+      setShowTrainerModal(true);
+    }
+  }, [pageData]);
 
   const toggleStatus = async (id) => {
     try {

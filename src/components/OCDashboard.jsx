@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { applicationAPI, dashboardAPI } from '../services/api';
+import { applicationAPI } from '../services/api';
 
 const TRACK_LABELS = {
   TAILORING: 'Tailoring',
@@ -25,11 +25,12 @@ const getStatusBadgeStyle = (status) => {
   return styles[status] || { background: '#f3f4f6', color: '#374151' };
 };
 
-const StatCard = ({ label, value, color }) => {
+const StatCard = ({ label, value, color, onClick }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div
+      onClick={onClick}
       style={{
         background: 'white',
         borderRadius: '8px',
@@ -50,16 +51,47 @@ const StatCard = ({ label, value, color }) => {
 };
 
 const OCDashboard = ({ currentUser, onNavigate }) => {
-  const [apiStats, setApiStats] = useState(null);
+  const [stats, setStats] = useState({
+    new: 0,
+    assignedToBatch: 0,
+    trainingStarted: 0,
+    trainingCompleted: 0,
+  });
   const [recentApps, setRecentApps] = useState([]);
 
   useEffect(() => {
-    dashboardAPI.getAdminStats()
-      .then(res => setApiStats(res))
-      .catch(() => {});
     applicationAPI.getApplications()
       .then(res => {
         const list = res?.data ?? (Array.isArray(res) ? res : []);
+        
+        // Count admissions by status
+        let newCount = 0;
+        let assignedCount = 0;
+        let startedCount = 0;
+        let completedCount = 0;
+
+        list.forEach(app => {
+          const admissions = app.admissions || [];
+          if (admissions.length === 0) {
+            newCount++;
+          } else {
+            admissions.forEach(admission => {
+              const status = admission.status;
+              if (status === 'ASSIGNED_TO_BATCH') assignedCount++;
+              else if (status === 'TRAINING_STARTED') startedCount++;
+              else if (status === 'TRAINING_COMPLETED') completedCount++;
+              else newCount++;
+            });
+          }
+        });
+
+        setStats({
+          new: newCount,
+          assignedToBatch: assignedCount,
+          trainingStarted: startedCount,
+          trainingCompleted: completedCount,
+        });
+
         setRecentApps(list.slice(0, 5).map(a => ({
           name: a.fullName ?? '—',
           course: TRACK_LABELS[a.preferredExperienceTrack] ?? a.preferredExperienceTrack ?? '—',
@@ -73,10 +105,10 @@ const OCDashboard = ({ currentUser, onNavigate }) => {
   const welcomeName = currentUser?.name?.split(' ')?.[0] || 'Coordinator';
 
   const statCards = [
-    { label: 'New Applications',  value: apiStats ? recentApps.length : '—',             color: '#2563eb' },
-    { label: 'Under Review',      value: apiStats?.pendingAssignments ?? '—',             color: '#d97706' },
-    { label: 'Assigned to Batch', value: apiStats?.candidatesEnrolled ?? '—',             color: '#16a34a' },
-    { label: 'Pending Placement', value: apiStats?.activeBatches ?? '—',                  color: '#ea580c' },
+    { label: 'New',                  value: stats.new,               color: '#2563eb', status: 'New' },
+    { label: 'Assigned to Batch',    value: stats.assignedToBatch,   color: '#16a34a', status: 'ASSIGNED_TO_BATCH' },
+    { label: 'Training Started',     value: stats.trainingStarted,   color: '#0891b2', status: 'TRAINING_STARTED' },
+    { label: 'Training Completed',   value: stats.trainingCompleted, color: '#059669', status: 'TRAINING_COMPLETED' },
   ];
 
   return (
@@ -90,7 +122,7 @@ const OCDashboard = ({ currentUser, onNavigate }) => {
       {/* Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
         {statCards.map((card) => (
-          <StatCard key={card.label} label={card.label} value={card.value} color={card.color} />
+          <StatCard key={card.label} label={card.label} value={card.value} color={card.color} onClick={() => onNavigate('CandidateList', { status: card.status })} />
         ))}
       </div>
 

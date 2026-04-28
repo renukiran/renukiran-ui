@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { dashboardAPI, batchAPI, applicationAPI } from '../services/api';
 
 const OPERATIONAL_STATS = [
-  { label: 'Total Courses', value: 8, trend: '+2 this quarter', trendDir: 'up', color: '#2563eb' },
-  { label: 'Active Batches', value: 5, trend: 'Across 4 courses', trendDir: 'flat', color: '#2563eb' },
-  { label: 'Candidates Enrolled', value: 142, trend: '+18 this month', trendDir: 'up', color: '#16a34a' },
-  { label: 'Pending Assignments', value: 23, trend: 'Needs attention', trendDir: 'down', color: '#d97706' },
+  { label: 'Total Courses', value: '-', trend: '', trendDir: 'up', color: '#2563eb' },
+  { label: 'Active Batches', value: '-', trend: '', trendDir: 'flat', color: '#2563eb' },
+  { label: 'Candidates Enrolled', value: '-', trend: '', trendDir: 'up', color: '#16a34a' },
+  // { label: 'Pending Assignments', value: '-', trend: 'Needs attention', trendDir: 'down', color: '#d97706' },
 ];
 
-const IMPACT_STATS = [
-  { label: 'Assessment Pass Rate', value: '78%', trend: '+5% from last batch', trendDir: 'up', color: '#16a34a' },
-  { label: 'Placement Rate', value: '62%', trend: 'Target: 70%', trendDir: 'flat', color: '#d97706' },
-  { label: 'Job Retention', value: '85%', trend: '6-month retention', trendDir: 'up', color: '#16a34a' },
-  { label: 'Avg Attendance', value: '88%', trend: 'Above 80% target', trendDir: 'up', color: '#16a34a' },
-];
+// const IMPACT_STATS = [
+//   { label: 'Assessment Pass Rate', value: '78%', trend: '+5% from last batch', trendDir: 'up', color: '#16a34a' },
+//   { label: 'Placement Rate', value: '62%', trend: 'Target: 70%', trendDir: 'flat', color: '#d97706' },
+//   { label: 'Job Retention', value: '85%', trend: '6-month retention', trendDir: 'up', color: '#16a34a' },
+//   { label: 'Avg Attendance', value: '88%', trend: 'Above 80% target', trendDir: 'up', color: '#16a34a' },
+// ];
 
 const RECENT_APPLICATIONS = [
   { name: 'Priya Sharma', course: 'Stitching Basic', status: 'New', date: '10 Mar 2026' },
@@ -57,11 +57,12 @@ const getCapacityBarColor = (pct) => {
   return '#22c55e';
 };
 
-const StatCard = ({ label, value, trend, trendDir, color }) => {
+const StatCard = ({ label, value, trend, trendDir, color, onClick }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div
+      onClick={onClick}
       style={{
         background: 'white',
         borderRadius: '8px',
@@ -128,21 +129,23 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
 
   const operationalStats = apiStats
     ? [
-        { label: 'Total Courses',        value: apiStats.totalCourses        ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
-        { label: 'Active Batches',        value: apiStats.activeBatches       ?? '—', trend: '', trendDir: 'flat', color: '#2563eb' },
-        { label: 'Candidates Enrolled',   value: apiStats.candidatesEnrolled  ?? '—', trend: '', trendDir: 'up',   color: '#16a34a' },
-        { label: 'Pending Assignments',   value: apiStats.pendingAssignments  ?? '—', trend: '', trendDir: 'down', color: '#d97706' },
+        { label: 'Total Courses',        value: apiStats.totalCourses        ?? '—', trend: '', trendDir: 'flat', color: '#2563eb', page: 'Courses' },
+        { label: 'Active Batches',        value: apiStats.activeBatches       ?? '—', trend: '', trendDir: 'flat', color: '#2563eb', page: 'BatchManagement' },
+        { label: 'Candidates Enrolled',   value: apiStats.candidatesEnrolled  ?? '—', trend: '', trendDir: 'up',   color: '#16a34a', page: 'CandidateList' },
       ]
-    : OPERATIONAL_STATS;
+    : OPERATIONAL_STATS.map((stat, idx) => ({
+        ...stat,
+        page: idx === 0 ? 'Courses' : idx === 1 ? 'BatchManagement' : 'CandidateList'
+      }));
 
-  const impactStats = apiStats
-    ? [
-        { label: 'Assessment Pass Rate', value: apiStats.assessmentPassRate ?? '—', trend: '', trendDir: 'up',   color: '#16a34a' },
-        { label: 'Placement Rate',        value: apiStats.placementRate      ?? '—', trend: `Target: 70%`,        trendDir: 'flat', color: '#d97706' },
-        { label: 'Job Retention',         value: apiStats.jobRetention       ?? '—', trend: '6-month retention', trendDir: 'up',   color: '#16a34a' },
-        { label: 'Avg Attendance',        value: apiStats.avgAttendance      ?? '—', trend: 'Above 80% target',  trendDir: 'up',   color: '#16a34a' },
-      ]
-    : IMPACT_STATS;
+  // const impactStats = apiStats
+  //   ? [
+  //       { label: 'Assessment Pass Rate', value: apiStats.assessmentPassRate ?? '—', trend: '', trendDir: 'up',   color: '#16a34a' },
+  //       { label: 'Placement Rate',        value: apiStats.placementRate      ?? '—', trend: `Target: 70%`,        trendDir: 'flat', color: '#d97706' },
+  //       { label: 'Job Retention',         value: apiStats.jobRetention       ?? '—', trend: '6-month retention', trendDir: 'up',   color: '#16a34a' },
+  //       { label: 'Avg Attendance',        value: apiStats.avgAttendance      ?? '—', trend: 'Above 80% target',  trendDir: 'up',   color: '#16a34a' },
+  //     ]
+  //   : IMPACT_STATS;
 
   const displayApps   = recentApps.length   > 0 ? recentApps   : RECENT_APPLICATIONS;
   const displayBatches = batchCapacity.length > 0 ? batchCapacity : BATCH_CAPACITY;
@@ -160,19 +163,37 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
         <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Operational Stats</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
           {operationalStats.map((stat) => (
-            <StatCard key={stat.label} label={stat.label} value={stat.value} trend={stat.trend} trendDir={stat.trendDir} color={stat.color} />
+            <StatCard key={stat.label} label={stat.label} value={stat.value} trend={stat.trend} trendDir={stat.trendDir} color={stat.color} onClick={() => stat.page && onNavigate && onNavigate(stat.page)} />
           ))}
         </div>
       </div>
 
       {/* Impact Stats */}
-      <div style={{ marginBottom: '32px' }}>
+      {/* <div style={{ marginBottom: '32px' }}>
         <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Impact Stats</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
           {impactStats.map((stat) => (
             <StatCard key={stat.label} label={stat.label} value={stat.value} trend={stat.trend} trendDir={stat.trendDir} color={stat.color} />
           ))}
         </div>
+      </div> */}
+
+      {/* Action Buttons */}
+      <div style={{ marginBottom: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <button onClick={() => onNavigate && onNavigate('UserManagement', { openModal: 'OC' })}
+          style={{ fontSize: '14px', color: '#7c3aed', background: 'white', border: '2px solid #7c3aed', borderRadius: '8px', padding: '12px 20px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.2s' }}
+          onMouseOver={(e) => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.color = 'white'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#7c3aed'; }}>
+          <span style={{ fontSize: '18px', lineHeight: '1' }}>+</span>
+          Add Office Coordinator
+        </button>
+        <button onClick={() => onNavigate && onNavigate('UserManagement', { openModal: 'Trainer' })}
+          style={{ fontSize: '14px', color: '#0d9488', background: 'white', border: '2px solid #0d9488', borderRadius: '8px', padding: '12px 20px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.2s' }}
+          onMouseOver={(e) => { e.currentTarget.style.background = '#0d9488'; e.currentTarget.style.color = 'white'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#0d9488'; }}>
+          <span style={{ fontSize: '18px', lineHeight: '1' }}>+</span>
+          Add Trainer
+        </button>
       </div>
 
       {/* Recent Applications */}

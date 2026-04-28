@@ -17,7 +17,10 @@ import AssessmentResults from './components/AssessmentResults';
 import { notificationAPI } from './services/api';
 
 const App = () => {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [activePage, setActivePage] = useState('Dashboard');
   const [pageData, setPageData] = useState(null);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -39,6 +42,7 @@ const App = () => {
   }, [currentUser]);
 
   const handleLoginSuccess = (user) => {
+    localStorage.setItem('currentUser', JSON.stringify(user));
     setCurrentUser(user);
     setActivePage('Dashboard');
   };
@@ -57,7 +61,7 @@ const App = () => {
       case 'Dashboard':
         return <Dashboard currentUser={currentUser} onNavigate={handleNavigate} />;
       case 'CandidateList':
-        return <CandidateList onNavigate={handleNavigate} />;
+        return <CandidateList onNavigate={handleNavigate} filterData={pageData} />;
       case 'CandidateProfile':
         return <CandidateProfile candidateData={pageData} onNavigate={handleNavigate} />;
       case 'MyBatches':
@@ -69,7 +73,7 @@ const App = () => {
       case 'BatchManagement':
         return <BatchManagement onNavigate={handleNavigate} />;
       case 'UserManagement':
-        return <UserManagement />;
+        return <UserManagement pageData={pageData} />;
       case 'Applications':
         return <Applications onNavigate={handleNavigate} />;
       case 'Placements':
@@ -88,6 +92,7 @@ const App = () => {
   const handleLogout = () => {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('rememberMe');
+    localStorage.removeItem('currentUser');
     setCurrentUser(null);
     setActivePage('Dashboard');
     setPageData(null);

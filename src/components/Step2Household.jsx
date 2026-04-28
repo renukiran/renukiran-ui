@@ -1,6 +1,5 @@
 import React from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
-import { useFormContext } from 'react-hook-form';
 
 const Err = ({ msg }) => msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
 const inputCls = (hasErr) =>
