@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { batchAPI, courseAPI, trainerAPI } from '../services/api';
+import { batchAPI, courseAPI, trainerAPI, candidateAPI } from '../services/api';
 
 const STATUS_BADGE = {
   Ongoing: 'bg-green-100 text-green-700',
@@ -33,15 +33,17 @@ const formatDateRange = (s, e) => {
 export const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers, mode = 'create', batch = null }) => {
   const isAssign = mode === 'assign';
 
-  // Resolve courseId from courseName if not directly available
-  const resolvedCourseId = batch?.courseId
-    || (courses || []).find(c => c.courseName === batch?.course)?.id
-    || '';
+  console.log('CreateBatchModal - mode:', mode);
+  console.log('CreateBatchModal - batch:', batch);
+  console.log('CreateBatchModal - courses:', courses);
+  console.log('CreateBatchModal - trainers:', trainers);
 
-  // Resolve trainerId from trainer name if not directly available
-  const resolvedTrainerId = batch?.trainerId
-    || (trainers || []).find(t => t.name === batch?.trainer)?.trainerId
-    || '';
+  // Resolve courseId and trainerId from form or defaults
+  const resolvedCourseId = batch?.courseId || '';
+  const resolvedTrainerId = batch?.trainerId || '';
+
+  console.log('Resolved courseId:', resolvedCourseId);
+  console.log('Resolved trainerId:', resolvedTrainerId);
 
   const [form, setForm] = useState({
     courseId: resolvedCourseId,
@@ -56,17 +58,15 @@ export const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers, m
 
   // Re-resolve trainerId once trainers list loads (async)
   React.useEffect(() => {
-    if (isAssign && !form.trainerId && trainers.length > 0) {
-      const found = trainers.find(t => t.name === batch?.trainer);
-      if (found) setForm(prev => ({ ...prev, trainerId: found.trainerId }));
+    if (isAssign && !form.trainerId && trainers.length > 0 && batch?.trainerId) {
+      setForm(prev => ({ ...prev, trainerId: batch.trainerId }));
     }
   }, [trainers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-resolve courseId once courses list loads (async)
   React.useEffect(() => {
-    if (isAssign && !form.courseId && courses.length > 0) {
-      const found = courses.find(c => c.courseName === batch?.course);
-      if (found) setForm(prev => ({ ...prev, courseId: found.id }));
+    if (isAssign && !form.courseId && courses.length > 0 && batch?.courseId) {
+      setForm(prev => ({ ...prev, courseId: batch.courseId }));
     }
   }, [courses]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -99,25 +99,46 @@ export const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers, m
 
   const handleSubmit = () => {
     if (!validate()) return;
+    console.log('Form data before submit:', form);
+    console.log('Course ID type:', typeof form.courseId, 'Value:', form.courseId);
+    console.log('Trainer ID type:', typeof form.trainerId, 'Value:', form.trainerId);
+    
+    const trainerId = form.trainerId ? Number(form.trainerId) : null;
+    const courseId = form.courseId ? Number(form.courseId) : null;
+    
+    if (!courseId || isNaN(courseId)) {
+      console.error('Invalid course ID:', form.courseId);
+      setErrors({ courseId: 'Invalid course selected' });
+      return;
+    }
+    
+    if (!trainerId || isNaN(trainerId)) {
+      console.error('Invalid trainer ID:', form.trainerId);
+      setErrors({ trainerId: 'Invalid trainer selected' });
+      return;
+    }
+    
     if (isAssign) {
       onSave({
         batchId: batch?.rawId,
         batchName: form.batchName,
-        courseId: Number(form.courseId),
-        trainerId: Number(form.trainerId),
+        courseId: courseId,
+        trainerId: trainerId,
         startDate: form.startDate,
         endDate: form.endDate,
         capacity: parseInt(form.capacity),
       });
     } else {
-      onSave({
+      const payload = {
         batchName: form.batchName.trim(),
-        courseId: Number(form.courseId),
-        trainerId: Number(form.trainerId),
+        courseId: courseId,
+        trainerId: trainerId,
         startDate: form.startDate,
         endDate: form.endDate,
         capacity: parseInt(form.capacity),
-      });
+      };
+      console.log('Payload being sent:', payload);
+      onSave(payload);
     }
     onClose();
   };
@@ -176,14 +197,20 @@ export const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers, m
               </label>
               <select
                 value={form.courseId}
-                onChange={(e) => set('courseId', e.target.value)}
+                onChange={(e) => {
+                  console.log('Course selected:', e.target.value);
+                  set('courseId', e.target.value);
+                }}
                 disabled={isAssign}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 appearance-none ${
                   isAssign ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : errors.courseId ? 'border-red-400' : 'border-gray-200'
                 }`}
               >
                 <option value="">Select course...</option>
-                {(courses || []).map((c) => <option key={c.id} value={c.id}>{c.courseName}</option>)}
+                {(courses || []).map((c) => {
+                  console.log('Course option:', c);
+                  return <option key={c.id} value={c.id}>{c.courseName}</option>;
+                })}
               </select>
               {errors.courseId && <p className="text-xs text-red-500 mt-1">{errors.courseId}</p>}
             </div>
@@ -216,13 +243,19 @@ export const CreateBatchModal = ({ onClose, onSave, nextId, courses, trainers, m
               </label>
               <select
                 value={form.trainerId}
-                onChange={(e) => set('trainerId', e.target.value)}
+                onChange={(e) => {
+                  console.log('Trainer selected:', e.target.value);
+                  set('trainerId', e.target.value);
+                }}
                 className={`w-full h-10 px-3 text-sm border rounded-md outline-none focus:border-blue-600 appearance-none ${
                   errors.trainerId ? 'border-red-400' : 'border-gray-200'
                 }`}
               >
                 <option value="">Select trainer...</option>
-                {(trainers || []).map((t) => <option key={t.trainerId} value={t.trainerId}>{t.name}</option>)}
+                {(trainers || []).map((t) => {
+                  console.log('Trainer option:', t);
+                  return <option key={t.userId} value={t.userId}>{t.name || t.firstName || t.username}</option>;
+                })}
               </select>
               {errors.trainerId && <p className="text-xs text-red-500 mt-1">{errors.trainerId}</p>}
             </div>
@@ -353,6 +386,7 @@ const BatchManagement = ({ onNavigate }) => {
   const [statusFilter, setStatusFilter] = useState('Status: All');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -363,20 +397,36 @@ const BatchManagement = ({ onNavigate }) => {
         setError(null);
         const data = await batchAPI.getBatches();
         const list = data?.content ?? (Array.isArray(data) ? data : []);
-        setBatches(list.map((b) => ({
-          rawId: b.id,
-          id: b.batchName,
-          course: b.courseName || '',
-          trainer: b.trainerName || '',
-          dates: formatDateRange(b.startDate, b.endDate),
-          startDate: b.startDate || '',
-          endDate: b.endDate || '',
-          enrolled: 0,
-          max: b.capacity || 0,
-          status: b.status || computeBatchStatus(b.startDate, b.endDate),
-        })));
+        const batchesWithCandidates = await Promise.all(
+          list.map(async (b) => {
+            let enrolled = 0;
+            try {
+              const candidates = await candidateAPI.getCandidatesByBatchId(b.id);
+              enrolled = Array.isArray(candidates) ? candidates.length : 0;
+            } catch (err) {
+              console.error(`Failed to fetch candidates for batch ${b.id}:`, err);
+            }
+            return {
+              rawId: b.id,
+              id: b.batchName,
+              course: b.courseName || '',
+              courseId: b.courseId,
+              trainer: b.trainerName || '',
+              trainerId: b.trainerId,
+              dates: formatDateRange(b.startDate, b.endDate),
+              startDate: b.startDate || '',
+              endDate: b.endDate || '',
+              enrolled,
+              max: b.capacity || 0,
+              capacity: b.capacity || 0,
+              status: b.status || computeBatchStatus(b.startDate, b.endDate),
+            };
+          })
+        );
+        setBatches(batchesWithCandidates);
       } catch (err) {
-        setError('Failed to load batches');
+        const errorMessage = err.response?.data?.message || err.response?.data?.error || err.response?.data?.details?.[0] || err.message || 'Failed to load batches';
+        setError(errorMessage);
         console.error(err);
       } finally {
         setLoading(false);
@@ -388,6 +438,8 @@ const BatchManagement = ({ onNavigate }) => {
           courseAPI.getCourses(),
           trainerAPI.getTrainers(),
         ]);
+        console.log('Courses from API:', cd);
+        console.log('Trainers from API:', td);
         setCourses(Array.isArray(cd) ? cd : []);
         setTrainers(Array.isArray(td) ? td : []);
       } catch (err) {
@@ -398,11 +450,13 @@ const BatchManagement = ({ onNavigate }) => {
     fetchCoursesAndTrainers();
   }, []);
 
-  const courseOptions = ['Course: All', ...new Set(batches.map((b) => b.course))];
+  const courseOptions = ['Course: All', ...courses.map(c => c.courseName)];
   const nextBatchId = `B${batches.length + 1}`;
 
   const handleCreateBatch = async (batch) => {
     try {
+      setError(null);
+      setSuccess(null);
       const payload = {
         batchName: batch.batchName,
         courseId: batch.courseId,
@@ -418,17 +472,23 @@ const BatchManagement = ({ onNavigate }) => {
           rawId: saved.id,
           id: saved.batchName,
           course: saved.courseName || '',
+          courseId: saved.courseId || batch.courseId,
           trainer: saved.trainerName || '',
+          trainerId: saved.trainerId || batch.trainerId,
           dates: formatDateRange(saved.startDate, saved.endDate),
           startDate: saved.startDate || batch.startDate,
           endDate: saved.endDate || batch.endDate,
           enrolled: 0,
           max: saved.capacity || batch.capacity,
+          capacity: saved.capacity || batch.capacity,
           status: saved.status || computeBatchStatus(saved.startDate, saved.endDate),
         },
       ]);
+      setSuccess('Batch created successfully!');
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError('Failed to create batch');
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.response?.data?.details?.[0] || err.message || 'Failed to create batch';
+      setError(errorMessage);
       console.error(err);
     }
   };
@@ -488,6 +548,10 @@ const BatchManagement = ({ onNavigate }) => {
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
+      )}
+
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{success}</div>
       )}
 
       {/* Toolbar */}

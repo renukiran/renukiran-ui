@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { applicationAPI, batchAPI, admissionsAPI } from '../services/api';
+import { applicationAPI, batchAPI, admissionsAPI, courseAPI } from '../services/api';
 
 const AVATAR_COLORS = ['#7c3aed', '#db2777', '#16a34a', '#0891b2', '#ea580c', '#d97706', '#0284c7', '#9333ea', '#be185d', '#0f766e'];
 
@@ -80,8 +80,6 @@ const CandidateList = ({ onNavigate, filterData }) => {
           });
         });
         setCandidates(mapped);
-        const uniqueCourses = ['All Courses', ...new Set(mapped.map(c => c.course).filter(c => c !== '—'))];
-        setCourseOptions(uniqueCourses);
       } catch (err) {
         setError('Failed to load candidates.');
         console.error(err);
@@ -90,6 +88,14 @@ const CandidateList = ({ onNavigate, filterData }) => {
       }
     };
     fetchCandidates();
+
+    courseAPI.getCourses()
+      .then(data => {
+        const list = Array.isArray(data) ? data : [];
+        const courseNames = ['All Courses', ...list.map(c => c.courseName)];
+        setCourseOptions(courseNames);
+      })
+      .catch(err => console.error('Failed to load courses', err));
 
     batchAPI.getBatches()
       .then(data => {

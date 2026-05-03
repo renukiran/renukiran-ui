@@ -1181,10 +1181,10 @@ const BatchDetail = ({ batchData, onNavigate }) => {
                 endDate: data.endDate,
                 capacity: data.capacity,
               });
-              const assignedTrainer = trainers.find((trainer) => trainer.trainerId === data.trainerId);
+              const assignedTrainer = trainers.find((trainer) => trainer.userId === data.trainerId);
               if (assignedTrainer && batchData) {
                 batchData.trainerId = data.trainerId;
-                batchData.trainer = assignedTrainer.name;
+                batchData.trainer = assignedTrainer.name || assignedTrainer.firstName || assignedTrainer.username;
               }
               setShowAssignModal(false);
             } catch (err) {
@@ -1194,7 +1194,11 @@ const BatchDetail = ({ batchData, onNavigate }) => {
           nextId={batchData?.id ?? batchData?.batchId ?? ''}
           courses={courses}
           trainers={trainers}
-          batch={batchData}
+          batch={{
+            ...batchData,
+            courseId: batchData?.courseId,
+            batchName: batchData?.batchName || batchData?.id,
+          }}
         />
       )}
     </div>

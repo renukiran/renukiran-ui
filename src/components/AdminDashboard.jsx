@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { dashboardAPI, batchAPI, applicationAPI } from '../services/api';
+import { dashboardAPI, batchAPI, applicationAPI, candidateAPI } from '../services/api';
 
 const OPERATIONAL_STATS = [
   { label: 'Total Courses', value: '-', trend: '', trendDir: 'up', color: '#2563eb' },
@@ -94,33 +94,61 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
       .catch((err) => console.error('Failed to load admin stats:', err));
 
     batchAPI.getBatches()
-      .then((data) => {
+      .then(async (data) => {
         const list = data?.content ?? (Array.isArray(data) ? data : []);
-        setBatchCapacity(list.slice(0, 4).map((b) => ({
-          name: `${b.batchName ?? b.name ?? '—'}`,
-          enrolled: b.enrolledCount ?? b.currentEnrollment ?? 0,
-          max: b.capacity ?? b.maxCapacity ?? 20,
-        })));
+        const batchesWithCandidates = await Promise.all(
+          list.slice(0, 4).map(async (b) => {
+            try {
+              const candidates = await candidateAPI.getCandidatesByBatchId(b.id);
+              const candidateCount = Array.isArray(candidates) ? candidates.length : 0;
+              return {
+                name: `${b.batchName ?? b.name ?? '—'}`,
+                enrolled: candidateCount,
+                max: b.capacity ?? b.maxCapacity ?? 20,
+              };
+            } catch (err) {
+              console.error(`Failed to load candidates for batch ${b.id}:`, err);
+              return {
+                name: `${b.batchName ?? b.name ?? '—'}`,
+                enrolled: 0,
+                max: b.capacity ?? b.maxCapacity ?? 20,
+              };
+            }
+          })
+        );
+        setBatchCapacity(batchesWithCandidates);
       })
       .catch((err) => console.error('Failed to load batches:', err));
 
     applicationAPI.getApplications()
       .then((res) => {
         const list = res?.data ?? (Array.isArray(res) ? res : []);
-        const trackLabel = (t) => {
-          const map = {
-            TAILORING: 'Tailoring', BEAUTY_AND_GROOMING: 'Beauty & Grooming',
-            FOOD_BUSINESS: 'Food Business', HANDICRAFT: 'Handicraft',
-            HOME_BASED_PRODUCTION: 'Home Production', OTHER: 'Other',
-          };
-          return map[t] || t || '—';
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '—';
+          const date = new Date(dateStr);
+          return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
         };
-        setRecentApps(list.slice(0, 5).map((a) => ({
-          name: a.fullName ?? a.full_name ?? '—',
-          course: trackLabel(a.preferredExperienceTrack ?? a.preferred_experience_track),
-          status: 'Applied',
-          date: '',
-        })));
+        const formatStatus = (status) => {
+          if (!status) return 'New';
+          return status
+            .toLowerCase()
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (char) => char.toUpperCase());
+        };
+        setRecentApps(list.slice(0, 5).map((a) => {
+          // Get course from admission if available, otherwise from preferred track
+          const admission = Array.isArray(a.admissions) && a.admissions.length > 0 ? a.admissions[0] : null;
+          const batchCourse = admission?.batch?.course?.courseName || admission?.batch?.courseName;
+          const course = batchCourse || '—';
+          const status = admission ? formatStatus(admission.status) : 'New';
+          
+          return {
+            name: a.fullName ?? a.full_name ?? '—',
+            course: course,
+            status: status,
+            date: formatDate(a.createdDate ?? a.created_date),
+          };
+        }));
       })
       .catch((err) => console.error('Failed to load applications:', err));
   }, []);
@@ -147,7 +175,7 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
   //     ]
   //   : IMPACT_STATS;
 
-  const displayApps   = recentApps.length   > 0 ? recentApps   : RECENT_APPLICATIONS;
+  const displayApps   = recentApps.length   > 0 ? recentApps   : [];
   const displayBatches = batchCapacity.length > 0 ? batchCapacity : BATCH_CAPACITY;
 
   return (

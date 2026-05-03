@@ -407,7 +407,7 @@ const CandidateProfile = ({ candidateData, onNavigate }) => {
                     Trainer
                   </label>
                   <div style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
-                    {trainer?.firstName || trainer?.username || course?.instructor || '—'}
+                    {trainer?.name || batch?.trainerName || trainer?.firstName || trainer?.username || course?.instructor || '—'}
                   </div>
                 </div>
                 <div>
