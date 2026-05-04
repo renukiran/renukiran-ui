@@ -400,11 +400,15 @@ const BatchManagement = ({ onNavigate }) => {
         const batchesWithCandidates = await Promise.all(
           list.map(async (b) => {
             let enrolled = 0;
-            try {
-              const candidates = await candidateAPI.getCandidatesByBatchId(b.id);
-              enrolled = Array.isArray(candidates) ? candidates.length : 0;
-            } catch (err) {
-              console.error(`Failed to fetch candidates for batch ${b.id}:`, err);
+            if (Array.isArray(b.candidates)) {
+              enrolled = b.candidates.length;
+            } else {
+              try {
+                const candidates = await candidateAPI.getCandidatesByBatchId(b.id);
+                enrolled = Array.isArray(candidates) ? candidates.length : 0;
+              } catch (err) {
+                console.error(`Failed to fetch candidates for batch ${b.id}:`, err);
+              }
             }
             return {
               rawId: b.id,

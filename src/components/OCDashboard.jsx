@@ -92,11 +92,17 @@ const OCDashboard = ({ currentUser, onNavigate }) => {
           trainingCompleted: completedCount,
         });
 
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '—';
+          const date = new Date(dateStr);
+          return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        };
+        
         setRecentApps(list.slice(0, 5).map(a => ({
           name: a.fullName ?? '—',
           course: TRACK_LABELS[a.preferredExperienceTrack] ?? a.preferredExperienceTrack ?? '—',
           status: 'New',
-          date: '—',
+          date: formatDate(a.createdDate ?? a.created_date),
         })));
       })
       .catch(() => {});

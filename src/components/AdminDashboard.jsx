@@ -87,70 +87,114 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
   const [apiStats, setApiStats] = useState(null);
   const [recentApps, setRecentApps] = useState([]);
   const [batchCapacity, setBatchCapacity] = useState([]);
+  const [attendanceAlerts, setAttendanceAlerts] = useState([]);
 
   useEffect(() => {
-    dashboardAPI.getAdminStats()
-      .then((data) => setApiStats(data))
-      .catch((err) => console.error('Failed to load admin stats:', err));
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch all data in parallel
+        const [statsData, batchesData, applicationsData] = await Promise.all([
+          dashboardAPI.getAdminStats().catch(err => {
+            console.error('Failed to load admin stats:', err);
+            return null;
+          }),
+          batchAPI.getBatches().catch(err => {
+            console.error('Failed to load batches:', err);
+            return null;
+          }),
+          applicationAPI.getApplications().catch(err => {
+            console.error('Failed to load applications:', err);
+            return null;
+          }),
+        ]);
 
-    batchAPI.getBatches()
-      .then(async (data) => {
-        const list = data?.content ?? (Array.isArray(data) ? data : []);
-        const batchesWithCandidates = await Promise.all(
-          list.slice(0, 4).map(async (b) => {
-            try {
-              const candidates = await candidateAPI.getCandidatesByBatchId(b.id);
-              const candidateCount = Array.isArray(candidates) ? candidates.length : 0;
+        // Set admin stats
+        if (statsData) {
+          setApiStats(statsData);
+        }
+
+        // Process batches with candidates
+        if (batchesData) {
+          const list = batchesData?.content ?? (Array.isArray(batchesData) ? batchesData : []);
+          const batchesWithCandidates = await Promise.all(
+            list.slice(0, 4).map(async (b) => {
+              let candidateCount = 0;
+              if (Array.isArray(b.candidates)) {
+                candidateCount = b.candidates.length;
+              } else {
+                try {
+                  const candidates = await candidateAPI.getCandidatesByBatchId(b.id);
+                  candidateCount = Array.isArray(candidates) ? candidates.length : 0;
+                } catch (err) {
+                  console.error(`Failed to load candidates for batch ${b.id}:`, err);
+                }
+              }
               return {
                 name: `${b.batchName ?? b.name ?? '—'}`,
                 enrolled: candidateCount,
                 max: b.capacity ?? b.maxCapacity ?? 20,
               };
-            } catch (err) {
-              console.error(`Failed to load candidates for batch ${b.id}:`, err);
-              return {
-                name: `${b.batchName ?? b.name ?? '—'}`,
-                enrolled: 0,
-                max: b.capacity ?? b.maxCapacity ?? 20,
-              };
-            }
-          })
-        );
-        setBatchCapacity(batchesWithCandidates);
-      })
-      .catch((err) => console.error('Failed to load batches:', err));
+            })
+          );
+          setBatchCapacity(batchesWithCandidates);
 
-    applicationAPI.getApplications()
-      .then((res) => {
-        const list = res?.data ?? (Array.isArray(res) ? res : []);
-        const formatDate = (dateStr) => {
-          if (!dateStr) return '—';
-          const date = new Date(dateStr);
-          return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-        };
-        const formatStatus = (status) => {
-          if (!status) return 'New';
-          return status
-            .toLowerCase()
-            .replace(/_/g, ' ')
-            .replace(/\b\w/g, (char) => char.toUpperCase());
-        };
-        setRecentApps(list.slice(0, 5).map((a) => {
-          // Get course from admission if available, otherwise from preferred track
-          const admission = Array.isArray(a.admissions) && a.admissions.length > 0 ? a.admissions[0] : null;
-          const batchCourse = admission?.batch?.course?.courseName || admission?.batch?.courseName;
-          const course = batchCourse || '—';
-          const status = admission ? formatStatus(admission.status) : 'New';
-          
-          return {
-            name: a.fullName ?? a.full_name ?? '—',
-            course: course,
-            status: status,
-            date: formatDate(a.createdDate ?? a.created_date),
+          // Extract attendance alerts from all batches
+          const alerts = [];
+          list.forEach((batch) => {
+            if (Array.isArray(batch.candidatesWithAttendance)) {
+              batch.candidatesWithAttendance.forEach((candidate) => {
+                // Find the admission for this specific batch
+                const batchAdmission = candidate.admissions?.find(adm => adm.batchId === batch.id);
+                const attendancePercentage = batchAdmission?.attendancePercentage ?? candidate.attendancePercentage ?? 0;
+                
+                if (attendancePercentage < 70) {
+                  alerts.push({
+                    name: candidate.name || '—',
+                    batch: batch.batchName || '—',
+                    pct: attendancePercentage,
+                  });
+                }
+              });
+            }
+          });
+          setAttendanceAlerts(alerts);
+        }
+
+        // Process applications
+        if (applicationsData) {
+          const list = applicationsData?.data ?? (Array.isArray(applicationsData) ? applicationsData : []);
+          const formatDate = (dateStr) => {
+            if (!dateStr) return '—';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
           };
-        }));
-      })
-      .catch((err) => console.error('Failed to load applications:', err));
+          const formatStatus = (status) => {
+            if (!status) return 'New';
+            return status
+              .toLowerCase()
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, (char) => char.toUpperCase());
+          };
+          setRecentApps(list.slice(0, 5).map((a) => {
+            const admission = Array.isArray(a.admissions) && a.admissions.length > 0 ? a.admissions[0] : null;
+            const batchCourse = admission?.batch?.course?.courseName || admission?.batch?.courseName;
+            const course = batchCourse || '—';
+            const status = admission ? formatStatus(admission.status) : 'New';
+            
+            return {
+              name: a.fullName ?? a.full_name ?? '—',
+              course: course,
+              status: status,
+              date: formatDate(a.createdDate ?? a.created_date),
+            };
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   const welcomeName = currentUser?.name?.split(' ')?.[0] || 'Admin';
@@ -289,45 +333,51 @@ const AdminDashboard = ({ currentUser, onNavigate }) => {
         {/* Attendance Alerts */}
         <div style={{ background: 'white', borderRadius: '10px', padding: '20px 22px' }}>
           <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Attendance Alerts</h3>
-          <div>
-            {ATTENDANCE_ALERTS.map((alert, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  background: '#fef3c7',
-                  border: '1px solid #fcd34d',
-                  borderRadius: '8px',
-                  marginBottom: idx < ATTENDANCE_ALERTS.length - 1 ? '12px' : 0,
-                }}
-              >
+          <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
+            {attendanceAlerts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af', fontSize: '13px' }}>
+                No attendance alerts. All candidates are above 70%.
+              </div>
+            ) : (
+              attendanceAlerts.map((alert, idx) => (
                 <div
+                  key={idx}
                   style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: '#fbbf24',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#92400e',
-                    fontWeight: 600,
-                    fontSize: '14px',
-                    flexShrink: 0,
+                    gap: '12px',
+                    padding: '12px',
+                    background: '#fef3c7',
+                    border: '1px solid #fcd34d',
+                    borderRadius: '8px',
+                    marginBottom: idx < attendanceAlerts.length - 1 ? '12px' : 0,
                   }}
                 >
-                  ⚠
+                  <div
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      background: '#fbbf24',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#92400e',
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    ⚠
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#111827' }}>{alert.name}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{alert.batch}</div>
+                  </div>
+                  <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#dc2626', flexShrink: 0 }}>{alert.pct}%</span>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#111827' }}>{alert.name}</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>{alert.batch}</div>
-                </div>
-                <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#dc2626', flexShrink: 0 }}>{alert.pct}%</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

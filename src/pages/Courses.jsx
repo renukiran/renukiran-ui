@@ -496,7 +496,7 @@ const Courses = ({ onNavigate }) => {
                 {/* Actions */}
                 <div className="flex gap-2">
                   <button
-                    onClick={() => { setEditingCourse(course); setShowModal(false); }}
+                    onClick={() => { setEditingCourse(course); setShowModal(true); }}
                     className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition">
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -524,11 +524,12 @@ const Courses = ({ onNavigate }) => {
         </div>
       )}
 
-      {showModal && (
-        <AddCourseModal onClose={() => setShowModal(false)} onSave={handleSaveCourse} />
-      )}
-      {editingCourse && (
-        <AddCourseModal initialData={editingCourse} onClose={() => setEditingCourse(null)} onSave={handleSaveCourse} />
+      {(showModal || editingCourse) && (
+        <AddCourseModal 
+          initialData={editingCourse} 
+          onClose={() => { setShowModal(false); setEditingCourse(null); }} 
+          onSave={handleSaveCourse} 
+        />
       )}
     </div>
   );

@@ -428,7 +428,11 @@ const CandidateProfile = ({ candidateData, onNavigate }) => {
                   <label style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
                     Attendance
                   </label>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#16a34a' }}>{admission?.attendance || '—'}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#16a34a' }}>
+                    {admission?.attendancePercentage !== undefined && admission?.attendancePercentage !== null 
+                      ? `${admission.attendancePercentage}%` 
+                      : '—'}
+                  </div>
                 </div>
               </div>
             );
