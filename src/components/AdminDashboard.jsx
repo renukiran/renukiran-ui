@@ -15,13 +15,13 @@ const OPERATIONAL_STATS = [
 //   { label: 'Avg Attendance', value: '88%', trend: 'Above 80% target', trendDir: 'up', color: '#16a34a' },
 // ];
 
-const RECENT_APPLICATIONS = [
-  { name: 'Priya Sharma', course: 'Stitching Basic', status: 'New', date: '10 Mar 2026' },
-  { name: 'Anita Devi', course: 'Computer Fundamentals', status: 'New', date: '10 Mar 2026' },
-  { name: 'Meena Kumari', course: 'Beauty Basic', status: 'Under Review', date: '9 Mar 2026' },
-  { name: 'Sunita Yadav', course: 'Stitching Basic', status: 'Selected', date: '8 Mar 2026' },
-  { name: 'Rekha Patel', course: 'Computer Fundamentals', status: 'Assigned', date: '7 Mar 2026' },
-];
+// const RECENT_APPLICATIONS = [
+//   { name: 'Priya Sharma', course: 'Stitching Basic', status: 'New', date: '10 Mar 2026' },
+//   { name: 'Anita Devi', course: 'Computer Fundamentals', status: 'New', date: '10 Mar 2026' },
+//   { name: 'Meena Kumari', course: 'Beauty Basic', status: 'Under Review', date: '9 Mar 2026' },
+//   { name: 'Sunita Yadav', course: 'Stitching Basic', status: 'Selected', date: '8 Mar 2026' },
+//   { name: 'Rekha Patel', course: 'Computer Fundamentals', status: 'Assigned', date: '7 Mar 2026' },
+// ];
 
 const BATCH_CAPACITY = [
   { name: 'Stitching Basic — Batch 3', enrolled: 18, max: 20 },
@@ -29,10 +29,10 @@ const BATCH_CAPACITY = [
   { name: 'Beauty Basic — Batch 1', enrolled: 12, max: 20 },
 ];
 
-const ATTENDANCE_ALERTS = [
-  { name: 'Kavita Singh', batch: 'Stitching Basic — Batch 3', pct: 62 },
-  { name: 'Deepa Rani', batch: 'Computer Fund. — Batch 2', pct: 68 },
-];
+// const ATTENDANCE_ALERTS = [
+//   { name: 'Kavita Singh', batch: 'Stitching Basic — Batch 3', pct: 62 },
+//   { name: 'Deepa Rani', batch: 'Computer Fund. — Batch 2', pct: 68 },
+// ];
 
 const getStatusBadgeStyle = (status) => {
   const styles = {
